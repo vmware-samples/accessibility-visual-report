@@ -1,0 +1,17 @@
+<!-- Copyright 2022 VMware, Inc. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div>
+    <textarea clrTextarea placeholder="Separate by newline" [(ngModel)]="inputExtraComments"
+        (drop)="dropHandler($event)" (dragover)="dragOverHandler($event)" (dragleave)="dragleaveHandler($event)"
+        (change)="textOnChange()" name="txtDesc" rows="3" cols="65" size="70"
+        placeholder="Please make sure one url one line, such as
+https://www.google.com
+https://www.amazon.com"></textarea>
+</div>
+<div [hidden]="invalidUrls.length==0" tabindex="0">
+    <span class="label label-danger">There are invalid URLs as below</span>
+    <div *ngFor="let url of invalidUrls">
+        <span class="label label-danger">{{url}}</span>
+    </div>
+</div>

@@ -1,0 +1,44 @@
+::ng-deep .issue-datagrid{
+    height: auto;
+}
+::ng-deep .issue-datagrid .datagrid{
+    border: none;
+    margin-top: 0;
+}
+::ng-deep .issue-datagrid .datagrid-footer{
+    background: none;
+    border: none;
+}
+::ng-deep .issue-datagrid .datagrid-header .datagrid-row{
+    border: none;
+}
+.sevirity{
+    overflow: hidden;
+    margin-bottom: .6rem;
+}
+.tagged-iframe{
+    border: 0;
+}
+.sevirity-value{
+    float: left;
+}
+.sevirity-dropdown{
+    float: right;
+}
+.element-title{
+    font-size: 14px;
+    font-weight: bold;
+    color: #000000;
+}
+.description{
+    margin-bottom: .6rem;
+}
+.source-code{
+    margin-bottom: .6rem;
+}
+::ng-deep .datagrid .datagrid-table .datagrid-placeholder-container{
+    border-top-color: #f5f0f0;
+}
+::ng-deep .datagrid .datagrid-cell{
+    line-height: 1.2rem;
+}

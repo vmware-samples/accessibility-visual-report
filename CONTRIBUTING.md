@@ -1,3 +1,6 @@
+<!-- Copyright 2022 VMware, Inc.
+SPDX-License-Identifier: MIT -->
+
 # Contributing to accessibility-visual-report
 
 The accessibility-visual-report project team welcomes contributions from the community. Before you start working with accessibility-visual-report, please

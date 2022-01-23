@@ -1,0 +1,240 @@
+# Copyright 2022 VMware, Inc.
+# SPDX-License-Identifier: MIT
+openapi: '3.0.2'
+info:
+  title: Accessibility Visual Report
+  version: '1.0.0'
+  description: |
+      **Accessibility Visual Report** for HTML web page, which provides a way to evaluate accessibility results and provides Visualized Report, related code viewer and bug fix helper.
+      Features that will be reviewed on this call include:
+      * Visualized Automatic Accessibility Report via Specific URLs
+      * Visualized results with icon tags
+      * Visualized code snippet
+      * AI/ML to provide fix suggestion (in future)
+      * Run comparison to view delta only against last run (in future)
+
+  termsOfService: "https://github.com/vmware-samples/accessibility-visual-report/blob/main/LICENSE"
+  contact:
+    name: "API developer"
+    email: "tanp@vmware.com"
+  license:
+    name: "MIT"
+    url: "https://github.com/vmware-samples/accessibility-visual-report/blob/main/LICENSE"
+
+servers:
+  - url: "http://{server-ip}:{port}/"
+    description: "Development Server"
+    variables:
+      server-ip:
+        default: localhost
+        description: If the server is spinned up in your local environment
+      port:
+        default: '8000'
+
+components:
+  schemas:
+    message:
+      type: string
+      description: Status of current request, possible values success or fail.
+    error_code:
+      type: integer
+      format: int32
+      description: Code of current task, possible values 0 for OK or negative integer for NOT OK.
+    error_message:
+      type: string
+      description: Short error message if any.
+    task_id:
+      type: string
+      description: id of current task.
+    task_status:
+      type: string
+      description: Status of current task, possible values task_ongoing or task_done.
+    task_report_url:
+      type: string
+      description: Report url of current task.
+    task_info:
+      type: object
+      description: Details of current task.
+
+    request_body:
+      type: object
+      description: |
+          The request body contains a parameter "urls" that a user wants to test the WCAG violations on.
+      required:
+        - urls
+      properties:
+        urls:
+          type: array
+          description: URLs to check WCAG violations on. It should be valid URLs with http/https schema.
+
+    success_response:
+      type: object
+      description: A JSON object that contains information of Crest's success response.
+      required:
+        - message
+        - error_code
+        - error_message
+        - task_id
+        - task_status
+        - task_report_url
+        - task_info
+      properties:
+        message:
+          $ref: '#/components/schemas/message'
+        error_code:
+          $ref: '#/components/schemas/error_code'
+        error_message:
+          $ref: '#/components/schemas/error_message'
+        task_id:
+          $ref: '#/components/schemas/task_id'
+        task_status:
+          $ref: '#/components/schemas/task_status'
+        task_report_url:
+          $ref: '#/components/schemas/task_report_url'
+        task_info:
+          $ref: '#/components/schemas/task_info'
+
+tags:
+- name: "a11y_task"
+  description: To create a new task with urls or query existing task via task_id.
+- name: "get_page"
+  description: To get content of a web page.
+
+
+paths:
+  /result/a11y_task:
+    post:
+      operationId: a11y_task
+      tags:
+        - "a11y_task"
+      summary: "To create a new task with urls"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/request_body'
+              example:
+                urls: ["http://www.abc.com"]
+        required: true
+      responses:
+        '200':
+          description: The Success response contains `task_id`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/success_response'
+                example:
+                  message: "success"
+                  error_code: 0
+                  error_message: ""
+                  task_id: "20220122.14553403.0.0.0.0"
+                  task_status: "task_ongoing"
+                  task_report_url: ""
+                  task_info: null
+      description: |
+          To create a new task with urls
+
+  /result/a11y_task/{task_id}/status:
+    get:
+      operationId: status
+      tags:
+        - "a11y_task"
+      summary: "To get status of task via task_id"
+      responses:
+        '200':
+          description: The Success response contains `task_id`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/success_response'
+                example:
+                  message: "success"
+                  error_code: 0
+                  error_message: ""
+                  task_id: "20220122.14553403.0.0.0.0"
+                  task_status: "task_ongoing"
+                  task_report_url: ""
+                  task_info: {}
+      description: |
+          To get status of task via task_id
+
+  /result/a11y_task/{task_id}/report:
+    get:
+      operationId: report
+      tags:
+        - "a11y_task"
+      summary: "To get report of task via task_id"
+      responses:
+        '200':
+          description: The Success response contains `task_id`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/success_response'
+                example:
+                  message: "success"
+                  error_code: 0
+                  error_message: ""
+                  task_id: "20220122.14553403.0.0.0.0"
+                  task_status: "task_ongoing"
+                  task_report_url: "https://localhost/visual-report/?url=https%3A//www.baidu.com&report=https%3A//localhost/reports/20220123/0%40e3b2ad43-b687-4564-b1b7-79919406ca3a/report.json"
+                  task_info: {}
+      description: |
+          To get report of task via task_id
+
+  /result/a11y_task/{task_id}/details:
+    get:
+      operationId: details
+      tags:
+        - "a11y_task"
+      summary: "To get details of task via task_id"
+      responses:
+        '200':
+          description: The Success response contains `task_id`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/success_response'
+                example:
+                  message: "success"
+                  error_code: 0
+                  error_message: ""
+                  task_id: "20220122.14553403.0.0.0.0"
+                  task_status: "task_ongoing"
+                  task_report_url: ""
+                  task_info: [
+                              {
+                                  "uuid": "a09c5412-08f4-478a-a7f8-c75fdbc187cc",
+                                  "user": "a11y-visual-report",
+                                  "result_type": "accessibility_static",
+                                  "screenshot_uid": "20220123.13435604.0.0.0.0",
+                                  "url": "{\"original_url\": \"https://www.baidu.com\", \"url_to_accessibility\": \"https://www.baidu.com\"}",
+                                  "result": "20220123/20220123.13435604.0.0.0.0/a09c5412-08f4-478a-a7f8-c75fdbc187cc",
+                                  "create_time": "2022-01-23 13:43:56.230578",
+                                  "last_update": "2022-01-23 15:01:15.442973"
+                              }
+                          ]
+      description: |
+          To get details of task via task_id
+
+  /result/get_page/{uri}:
+    get:
+      operationId: get_page
+      tags:
+      - "get_page"
+      summary: ""
+      responses:
+        '200':
+          description: The Success Response that returns an HTML page.
+          content:
+            text/html:
+              schema:
+                type: string
+              example:
+                '<html lang="en"> <head> <meta charset="UTF-8"> <title>My Page</title>...</html>'
+      description: |
+        To get content of a web page.
+
+externalDocs:
+  description: "Find out more about accessibility-visual-report"
+  url: "https://github.com/vmware-samples/accessibility-visual-report/"
