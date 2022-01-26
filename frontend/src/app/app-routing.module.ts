@@ -4,7 +4,7 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Routes, RouterModule } from '@angular/router';
-import { ModuleWithProviders } from '@angular/compiler/src/core';
+import { ModuleWithProviders } from '@angular/core';
 import { HomeComponent } from './components/home/home.component';
 
 export const ROUTES: Routes = [
@@ -12,4 +12,4 @@ export const ROUTES: Routes = [
   { path: 'visual-report', component: HomeComponent },
 ];
 
-export const ROUTING: ModuleWithProviders = RouterModule.forRoot(ROUTES, { useHash: false });
+export const ROUTING: ModuleWithProviders<any> = RouterModule.forRoot(ROUTES, { useHash: false });

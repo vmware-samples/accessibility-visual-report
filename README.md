@@ -34,8 +34,8 @@ Features that will be reviewed on this call include:
 *Accessibility Visual Report assumes below dependencies installed:*
 * Python 3.9.2+
 * Django 4.0.1+
-* Node 12.22.9+
-* Angular 11.2.4+
+* NodeJS 16.13.2+
+* Angular 13.1.4+
 
 *Accessibility Visual Report also depends on Accessibility Evaluation API:*
 * [Crest - Open Source Software](https://github.com/vmware/crest)
