@@ -47,6 +47,7 @@
     "mutationobserver-shim": "^0.3.7",
     "ngx-papaparse": "^5.0.0",
     "papaparse": "^5.3.1",
+    "resolve-url-loader": "^5.0.0",
     "rxjs": "^7.5.2",
     "rxjs-compat": "^6.6.7",
     "ts-helpers": "^1.1.2",
