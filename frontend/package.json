@@ -79,7 +79,6 @@
     "ts-node": "^10.4.0",
     "tslint": "~6.1.0",
     "typescript": "4.5.5",
-    "typings": "^2.1.1",
     "webdriver-manager": "^12.1.8"
   }
 }
