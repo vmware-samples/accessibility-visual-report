@@ -33,9 +33,9 @@ Features that will be reviewed on this call include:
 ## Getting Started
 *Accessibility Visual Report assumes below dependencies installed:*
 * Python 3.9.2+
-* Django 4.0.1+
+* Django 4.0.2+
 * NodeJS 16.13.2+
-* Angular 13.1.4+
+* Angular 13.2.2+
 
 *Accessibility Visual Report also depends on Accessibility Evaluation API:*
 * [Crest - Open Source Software](https://github.com/vmware/crest)
@@ -64,7 +64,7 @@ accessibility-visual-report
 ### Update settings to your environment
 *Accessibility Visual Report has both backend and frontend*
 #### Backend by Django
-* **(Required)** Edit 'backend/accessibility/setting/config.py' per Accessibility Evaluation API in use:
+* **(Required)** Edit 'backend/accessibility/settings/config.py' per Accessibility Evaluation API in use:
   * WAVE_SERVER
   * WAVE_API_KEY
   * CREST_SERVER
@@ -86,7 +86,7 @@ accessibility-visual-report
 *within accessibility-visual-report/frontend directory*
 * `npm run start`
 
-*By default, it runs at https://localhost*
+*By default, it runs at https://localhost:443*
 
 ### Run and View first Accessibility Visual Report
 
