@@ -2,14 +2,14 @@
 # SPDX-License-Identifier: MIT
 
 # from django.conf.urls import url
-from django.urls import include, re_path
+from django.urls import include, re_path, path
 from rest_framework.urlpatterns import format_suffix_patterns
 
 from . import views
 
 result_patterns=[
     re_path(r'^get_page/$',views.get_page),
-    re_path(r'^get_page/(?P<page_url>[\w\.:/%]+)$',views.get_page),
+    path('get_page/<path:page_url>',views.get_page),
     re_path(r'^a11y_task/$',views.a11y_task),
     re_path(r'^a11y_task/(?P<task_id>[\w\.]+)/(?P<task_report>[\w\.]+|)$',views.a11y_task),
     re_path(r'^post_to_accessibility/$',views.post_to_accessibility),

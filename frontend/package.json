@@ -24,8 +24,15 @@
   "homepage": "https://github.com/vmware-samples/accessibility-visual-report#readme",
   "dependencies": {
     "@angular-devkit/build-angular": "^13.2.3",
+    "@angular/animations": "^13.2.3",
+    "@angular/cdk": "^13.2.3",
+    "@angular/common": "^13.2.3",
+    "@angular/compiler": "^13.2.3",
+    "@angular/compiler-cli": "^13.2.3",
     "@angular/core": "^13.2.2",
+    "@angular/forms": "^13.2.3",
     "@angular/material": "^13.2.2",
+    "@angular/platform-browser": "^13.2.3",
     "@angular/platform-browser-dynamic": "^13.2.2",
     "@angular/router": "^13.2.2",
     "@cds/core": "^5.6.3",
@@ -34,6 +41,8 @@
     "@clr/ui": "^13.0.1",
     "@lit/reactive-element": "^1.2.1",
     "@webcomponents/webcomponentsjs": "^2.6.0",
-    "jquery": "^3.6.0"
+    "jquery": "^3.6.0",
+    "typescript": "^4.5.5",
+    "zone.js": "^0.11.4"
   }
 }
