@@ -11,11 +11,14 @@ import { LiveAnnouncer } from '@angular/cdk/a11y';
   styleUrls: ['./summary.component.css']
 })
 export class SummaryComponent implements OnInit {
-  @Input()
+  // @Input()
   currentPage: number;
 
   @Input()
   defectTypeElements;
+
+  element : any = null;
+  issueOnTitle : string = "";
 
   allElements = [
     {
@@ -45,7 +48,20 @@ export class SummaryComponent implements OnInit {
    }
 
   ngOnInit(): void {
-
+    // delay 300ms to avoid out of sync
+    setInterval(()=>{
+      let newCurrentPage = Number(document.getElementById('numberSign').innerText);
+      if (newCurrentPage != this.currentPage) {
+        // console.log(this.currentPage, this.defectTypeElements)
+        this.gotoPage(newCurrentPage);
+      }
+    },300)
   }
 
+  gotoPage(i) {
+    this.currentPage = i;
+    this.element = this.defectTypeElements[this.currentPage-1];
+    this.issueOnTitle = "Issue "+this.currentPage +"/" + this.defectTypeElements.length
+    this.liveAnnouncer.announce( "You are now on: "+ this.issueOnTitle.replace("/"," of "))
+  }
 }

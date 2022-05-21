@@ -50,7 +50,7 @@ export class HomeComponent implements OnInit {
   totalIssue: number = 0;
   alldefects: any[];
   visibleEle: any[];
-  numberSign: number;
+  numberSign: number = 1;
   defectName: string;
   signpostPosition: string = 'bottom-right';
   isMemuExpanded: boolean = true;
@@ -215,9 +215,10 @@ export class HomeComponent implements OnInit {
           defectNumBgColor: defectNumBgColor,
           defectNumFontColor: defectNumFontColor,
           eyeHide: eyeHide,
-          eyeHideArialLabel: (eyeHide?'Show ':'Hide ')+ totalDefect + key +' on page',
+          eyeHideArialLabel: (eyeHide?'Show ':'Hide ')+ totalDefect +' '+ key +' on page',
+          eyeHideDoneArialLabel:  totalDefect +' '+ key +' '+(eyeHide?'shown':'hidden'),
           isShowIssueList: false,
-          showOrHideBreakdown: 'Show ' +key+' breakdown'
+          showOrHideBreakdown: 'Show ' +key+' breakdown'  
         });
       m++;
     }
@@ -227,7 +228,10 @@ export class HomeComponent implements OnInit {
 
   syncSelectionFormPanelToPage(defectTp=null) {
     if (defectTp) {
-      this.liveAnnouncer.announce( "Succeeded to " + defectTp.eyeHideArialLabel)
+      defectTp.eyeHideArialLabel= (defectTp.eyeHide?'Hide ':'Show ')+ defectTp.totalDefect +' '+ defectTp.category +' on page';
+      defectTp.eyeHideDoneArialLabel= defectTp.totalDefect +' '+ defectTp.category +' '+(defectTp.eyeHide?'shown':'hidden');  
+      this.liveAnnouncer.announce( defectTp.eyeHideDoneArialLabel)
+      defectTp.eyeHide=!defectTp.eyeHide;
     }
     const visibleTypeDefects = this.defectTypeList.filter(d => !d.eyeHide);
     this.alldefects = [];
@@ -266,7 +270,7 @@ export class HomeComponent implements OnInit {
   }
 
   displaySignpost(event) {
-    const solidBorderSign = event.toElement;
+    const solidBorderSign = event.toElement || event.srcElement;
     if(solidBorderSign && solidBorderSign.className.indexOf('dashed-border-sign') !== -1) {
       this.removeClass(this.element_mapping.vavr.xpath.activeElement, 'solid-border-sign');
       this.element_mapping.vavr.xpath.activeElement = solidBorderSign;
@@ -300,7 +304,7 @@ export class HomeComponent implements OnInit {
     const stwOffsetHeight = solidBorderSign.offsetHeight;
     const stwOffsetWidth = solidBorderSign.offsetWidth;
     const signpostHeight = 480;
-    const signpostWidth = 350;
+    const signpostWidth = 370;
     const totalHeight = stwOffsetTop + stwOffsetHeight + signpostHeight;
     const totalWidth = stwOffsetleft + stwOffsetWidth + signpostWidth;
     const windowWidth = document.documentElement.clientWidth;
@@ -489,7 +493,8 @@ export class HomeComponent implements OnInit {
 
     event.stopPropagation();
     // 获取需要排除的元素
-    var elemCancel = event.toElement.id == 'pop-out-in' || event.toElement.id == 'pop-outIn-img';
+    const solidBorderSign = event.toElement || event.srcElement;
+    var elemCancel = solidBorderSign.id == 'pop-out-in' || solidBorderSign.id == 'pop-outIn-img';
     // 如果拖拽的是排除元素，函数返回
     if (elemCancel) {
       return true;
@@ -504,7 +509,8 @@ export class HomeComponent implements OnInit {
 
       const dragRef = document.getElementById('menu-content-fixed');
       // 获取需要排除的元素
-      var elemCancel = event.toElement.id == 'pop-out-in' || event.toElement.id == 'pop-outIn-img';
+      const solidBorderSign = event.toElement || event.srcElement;
+      var elemCancel = solidBorderSign.id == 'pop-out-in' || solidBorderSign.id == 'pop-outIn-img';
       if (!this.floating || elemCancel) {
         return true;
       }

@@ -52,8 +52,8 @@
             </header>
             <div class="menu-body">
               <div class="pageUrl-title">
-                <label *ngIf="originalUrl">Page Tested:</label>
-                <label *ngIf='!originalUrl'>Enter URL(s):</label>
+                <h2 class="pageUrl-title" *ngIf="originalUrl">Page Tested:</h2>
+                <h2 class="pageUrl-title" *ngIf='!originalUrl'>Enter URL(s):</h2>
               </div>
               <div class="pageUrl-select">
                 <mat-progress-bar mode="indeterminate" *ngIf='isLoading'></mat-progress-bar>
@@ -90,16 +90,15 @@
                       <div hidden class="severity-group">
                         <input type="checkbox" clrCheckbox /><span id='groupBySeveruty'>Group by severity</span>
                       </div>
+                      <p class="visually-hidden">Beginning of vTaaS Test Results</p>
                       <section class="summary-section" *ngFor='let defectTp of defectTypeList'>
                         <div class="issue-header" [ngClass]="{'has-border-bottom':!defectTp.isShowIssueList,'has-no-border-bottom':defectTp.isShowIssueList}">
                           <div class="issue-title">
-                            <h4>
-                               <button class="no-border-btn" (click)='defectTp.eyeHide = !defectTp.eyeHide;syncSelectionFormPanelToPage(defectTp);' [attr.aria-label]="defectTp.eyeHideArialLabel">
-                                 <cds-icon class="eyeIcon" shape='eye' *ngIf='!defectTp.eyeHide' solid status='info'></cds-icon>
-                                 <cds-icon class="eyeIcon" shape='eye-hide' *ngIf='defectTp.eyeHide' solid status='info'></cds-icon>
-                               </button>
-                               <span>{{defectTp.category}}</span>
-                            </h4>
+                            <h3>{{defectTp.category}}</h3>
+                            <button class="no-border-btn" (click)='syncSelectionFormPanelToPage(defectTp);' [attr.aria-label]="defectTp.eyeHideArialLabel">
+                              <cds-icon class="eyeIcon" shape='eye' *ngIf='!defectTp.eyeHide' solid status='info'></cds-icon>
+                              <cds-icon class="eyeIcon" shape='eye-hide' *ngIf='defectTp.eyeHide' solid status='info'></cds-icon>
+                            </button>
                             <div [ngStyle]="{background: defectTp.defectNumBgColor, color: defectTp.defectNumFontColor}">{{defectTp.totalDefect}}</div>
                           </div>
                           <div class="show-hide-breakdown">
@@ -111,15 +110,17 @@
                             <clr-accordion-title class="issue-accordion-title" (click)='openPanel(defectType, defectTp.defectList)'>
                               <cds-icon shape="eye" status='info' class="eyeIcon"></cds-icon>
                               <span class="defectTypeName">{{defectType.title}}</span>
-                              <div class="">{{defectType.elementIds.length}}</div>
+                              <div class="">{{defectType.defectTypeElements.length}}</div>
                             </clr-accordion-title>
                             <clr-accordion-content *clrIfExpanded>
-                              <app-summary [defectTypeElements]="defectType.defectTypeElements" [(currentPage)]="numberSign"></app-summary>
+                              <app-summary [defectTypeElements]="defectType.defectTypeElements"></app-summary>
                             </clr-accordion-content>
                           </clr-accordion-panel>
                         </clr-accordion>
                       </section>
+                      <p class="visually-hidden">End of vTaaS Test Results</p>  
                     </clr-tab-content>
+
                 </clr-tab>
                 <!-- <clr-tab>
                     <button clrTabLink><clr-icon shape="tree-view" class="tab-icons"></clr-icon>Structure</button>
@@ -164,7 +165,8 @@
                     <div class="num-btn" clrSignpostTrigger id='numberSign'>{{numberSign}}</div>
                     <clr-signpost-content class="signpost-content" [clrPosition]="signpostPosition" *clrIfOpen>
                         <h5 class="sign-title">{{defectName}}</h5>
-                        <app-summary class="signpost-tip" [(currentPage)]='numberSign' [defectTypeElements]='visibleEle'></app-summary>
+                        <!-- <app-summary class="signpost-tip" [(currentPage)]='numberSign' [defectTypeElements]='visibleEle'></app-summary> -->
+                        <app-summary class="signpost-tip" [defectTypeElements]='visibleEle'></app-summary>
                     </clr-signpost-content>
                 </clr-signpost>
             </div>
