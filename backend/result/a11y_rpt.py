@@ -199,7 +199,7 @@ def updateAccessibilityResultCategory(accessibility_result_categories):
             for issue_id,new_category_name in category_value.items():
                 if('items' in accessibility_result_category.keys()):
                     accessibility_result_category_items=accessibility_result_category['items']
-                    if(issue_id in accessibility_result_category_items.keys()):
+                    if((isinstance(accessibility_result_category_items,dict)) and (issue_id in accessibility_result_category_items.keys())):
                         accessibility_result_category_issue=accessibility_result_category_items[issue_id]
                         if(not(new_category_name in updated_accessibility_result_categories.keys())):
                             updated_accessibility_result_categories[new_category_name]={"description":new_category_name,"count":0,"items":{}}
@@ -209,7 +209,7 @@ def updateAccessibilityResultCategory(accessibility_result_categories):
                         updated_accessibility_result_categories[new_category_name]['items'][issue_id]=accessibility_result_category_issue
                         accessibility_result_category['count']-=accessibility_result_category_issue['count']
                         del accessibility_result_category_items[issue_id]
-                        if(updated_accessibility_result_categories[old_category_name]['count']==0):
+                        if((old_category_name in updated_accessibility_result_categories.keys()) and (updated_accessibility_result_categories[old_category_name]['count']==0)):
                             del updated_accessibility_result_categories[old_category_name]
     return updated_accessibility_result_categories
 
@@ -250,6 +250,14 @@ def updateAccessibilityResultJson(result_json,result_element_entry):
                         result_category_value_item_count=0
                         to_remove_items=[]
                         for result_category_value_item_key,result_category_value_item_value in result_category_value_items.items():
+                            is_issue_excluded=False
+                            if(('issue_items' in result_element_entry.keys()) and (len(result_element_entry['issue_items'])>0) and ('issue_items_filter_type' in result_element_entry.keys())):
+                                if(((result_element_entry['issue_items_filter_type'].lower()=='include') and (not result_category_value_item_key in result_element_entry['issue_items'])) or
+                                    ((result_element_entry['issue_items_filter_type'].lower()=='exclude') and (result_category_value_item_key in result_element_entry['issue_items']))):
+                                    is_issue_excluded=True
+                                    to_remove_items.append(result_category_value_item_key)
+                            if(is_issue_excluded):
+                                continue
                             key='id'
                             if(key in result_category_value_item_value.keys()):
                                 result_category_value_item_id=result_category_value_item_value[key]
@@ -296,11 +304,11 @@ def updateAccessibilityResultJson(result_json,result_element_entry):
                             result_category_value_item_count+=result_category_value_item_value['count']
                             if(result_category_value_item_value['count']==0):
                                 to_remove_items.append(result_category_value_item_key)
-                        result_category_value_items=getIteratablesRemoved(result_category_value_items,to_remove_items)
+                        result_categories[accessibility_category_key]['items']=getIteratablesRemoved(result_category_value_items,to_remove_items)
                         accessibility_category_value['count']=result_category_value_item_count
                     if(accessibility_category_value['count']==0):
                         to_remove_categories.append(accessibility_category_key)
-        result_categories=getIteratablesRemoved(result_categories,to_remove_categories)
+        result_json['categories']=getIteratablesRemoved(result_categories,to_remove_categories)
     return result_json
 
 def getXpathIndexible(element_list,indexible_element):
@@ -335,7 +343,7 @@ def handleAccessibilityFailedResult(result_api_type,accessibility_result):
     if(result_api_type=='wave'):
         if(len(accessibility_result)>0):
             try:
-                accessibility_result=replace_json_double_quote(accessibility_result)
+                #accessibility_result=replace_json_double_quote(accessibility_result)
                 accessibility_result_json=json.loads(accessibility_result)
             except json.decoder.JSONDecodeError as e:
                 accessibility_error_type,accessibility_error_message=getAccessibilityError(accessibility_result)
@@ -368,35 +376,6 @@ def getAccessibilityError(accessibility_result):
             error_message={'accessibility_error_pattern':{accessibility_error_type:accessibility_error_message},"accessibility_error_message":json.dumps(accessibility_result)}
             break
     return error_type,error_message
-
-def handleAccessibilityFailedResult(result_api_type,accessibility_result):
-    error_message=''
-    if(result_api_type=='wave'):
-        if(len(accessibility_result)>0):
-            try:
-                accessibility_result=replace_json_double_quote(accessibility_result)
-                accessibility_result_json=json.loads(accessibility_result)
-            except json.decoder.JSONDecodeError as e:
-                accessibility_error_type,accessibility_error_message=getAccessibilityError(accessibility_result)
-                if(accessibility_error_type==0):
-                    error_message='an invlid json from '+result_api_type+': \''+str(e).replace('\',\'','')+'\''
-                    print(error_message)
-                elif(accessibility_error_type==1):
-                    failed_result_list=eval(result.replace('}{','},{'))
-                    for failed_result in failed_result_list:
-                        if('error' in failed_result.keys()):
-                            error_message+=failed_result['error']
-                    error_message=error_message.replace('\n','').replace('\r','')
-                else:
-                    error_message=accessibility_error_message
-                accessibility_result=json.dumps({"success":"False","error":error_message})
-    elif(result_api_type=='crest'):
-        try:
-            accessibility_result_json=json.loads(accessibility_result)
-        except json.decoder.JSONDecodeError as e:
-            error_message='an invlid json from '+result_api_type+': \''+str(e).replace('\',\'','')+'\''
-            print(error_message)
-    return accessibility_result,error_message
 
 def getAccessibilityError(result_api_type,accessibility_result):
     error_type=0

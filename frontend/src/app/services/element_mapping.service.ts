@@ -157,6 +157,7 @@ export class ElementMappingService {
                 }
 
                 let issues = report_current.defects.map(issue => {
+                    issue.xpath = issue.elementIds.filter(eleId => this.xpath.Locator[eleId] == '-1');
                     issue.elementIds = issue.elementIds.map(elementId=>{
                         return this.xpath.Locator[elementId];
                     });

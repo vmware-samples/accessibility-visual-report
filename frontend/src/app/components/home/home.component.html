@@ -13,7 +13,7 @@
             <header class="header-6">
               <div class="branding">
                   <span class="nav-link">
-                      <clr-icon shape="vm-bug"></clr-icon>
+                      <clr-icon shape="vm-bug" style="cursor: pointer;" (click)="backToHomePage()"></clr-icon>
                       <h1 class="title">Accessibility Test Results</h1>
                   </span>
               </div>
@@ -70,7 +70,7 @@
                   <clr-dropdown-menu *clrIfOpen class="pageUrl-dropdown-menu">
                       <button *ngFor="let report of schema_mapping.reports" (click)='selectUrl(report)' clrDropdownItem>
                           <div class="page-title">{{report.pageTitle}}</div>
-                          <i class="original-url">{{report.originalUrl}}</i>
+                          <i class="original-url" [title]="report.originalUrl">{{report.originalUrl}}</i>
                       </button>
                   </clr-dropdown-menu>
                 </clr-dropdown>
@@ -78,24 +78,28 @@
                 <app-drag-drop *ngIf='!originalUrl' [inputURLs]="entriedUrl" (dragDropEvent)="dragDropFile($event)">
                 </app-drag-drop>
                 <!-- <textarea *ngIf='!originalUrl' class="page-url" [(ngModel)]="entriedUrl" rows="3" aria-label="Enter URL, one url per line"></textarea> -->
-                <button class="pageUrl-refresh-btn btn btn-primary" [disabled]="isHaveInvalidUrls" (click)='refreshPage()' aria-label="Refresh Report">
+                <button class="pageUrl-refresh-btn btn btn-primary" [disabled]="isHaveInvalidUrls || !originalUrl" (click)='refreshPage()' aria-label="Refresh Report">
                   <clr-icon shape="refresh"></clr-icon>
                 </button>
               </div>
-
+              <div style="margin-top: -30px;" *ngIf="isIncorrectUrl">The url entered in Page Tested is not recognized and lacks [https://|https:].</div>
+              
               <clr-tabs class="results-tabs">
                 <clr-tab aria-label="Test Results">
                     <button clrTabLink id="link1"><clr-icon shape="form" class="tab-icons"></clr-icon>Test Results</button>
+                    <clr-tab-content *ngIf="defectList?.length == 0 && !isLoading">
+                      <div class="none">0 errors</div>
+                    </clr-tab-content>
                     <clr-tab-content id="content1" *clrIfActive="true">
                       <div hidden class="severity-group">
                         <input type="checkbox" clrCheckbox /><span id='groupBySeveruty'>Group by severity</span>
                       </div>
                       <p class="visually-hidden">Beginning of vTaaS Test Results</p>
-                      <section class="summary-section" *ngFor='let defectTp of defectTypeList'>
-                        <div class="issue-header" [ngClass]="{'has-border-bottom':!defectTp.isShowIssueList,'has-no-border-bottom':defectTp.isShowIssueList}">
+                      <section class="summary-section displayedDefectsSection" *ngFor='let defectTp of defectTypeList'>
+                        <div class="issue-header" [ngClass]="{'has-border-bottom':!defectTp.isShowIssueList || defectTp.totalDefect == 0,'has-no-border-bottom':defectTp.isShowIssueList && defectTp.totalDefect > 0}">
                           <div class="issue-title">
                             <h3>{{defectTp.category}}</h3>
-                            <button class="no-border-btn" (click)='syncSelectionFormPanelToPage(defectTp);' [attr.aria-label]="defectTp.eyeHideArialLabel">
+                            <button class="no-border-btn" (click)='syncSelectionFromPanelToPage(defectTp)' [attr.aria-label]="defectTp.eyeHideArialLabel">
                               <cds-icon class="eyeIcon" shape='eye' *ngIf='!defectTp.eyeHide' solid status='info'></cds-icon>
                               <cds-icon class="eyeIcon" shape='eye-hide' *ngIf='defectTp.eyeHide' solid status='info'></cds-icon>
                             </button>
@@ -106,14 +110,39 @@
                           </div>
                         </div>
                         <clr-accordion class="issue-list" *ngIf='defectTp.isShowIssueList'>
-                          <clr-accordion-panel *ngFor='let defectType of defectTp.defectList'>
-                            <clr-accordion-title class="issue-accordion-title" (click)='openPanel(defectType, defectTp.defectList)'>
+                          <clr-accordion-panel *ngFor='let defectType of defectTp.defectList' [hidden]="defectType.defectTypeElements == 0">
+                            <clr-accordion-title class="issue-accordion-title"  (click)='openPanel(defectType, defectTp)'>
                               <cds-icon shape="eye" status='info' class="eyeIcon"></cds-icon>
                               <span class="defectTypeName">{{defectType.title}}</span>
-                              <div class="">{{defectType.defectTypeElements.length}}</div>
+                              <cds-icon shape="angle" direction="right" class="expend-icon" [ngClass]="{'panel-open': defectType.panelOpen,'panel-close':!defectType.panelOpen}"></cds-icon> 
+                              <div class="ele-length">{{defectType.defectTypeElements.length}}</div>                   
                             </clr-accordion-title>
                             <clr-accordion-content *clrIfExpanded>
-                              <app-summary [defectTypeElements]="defectType.defectTypeElements"></app-summary>
+                              <app-summary [defectTypeElements]="defectType.defectTypeElements" [category]="defectType.category"></app-summary>
+                            </clr-accordion-content>
+                          </clr-accordion-panel>
+                        </clr-accordion>
+                      </section>
+                      <section class="summary-section" *ngFor='let defectTp of notDisplayDefectTypeList' [hidden]="defectTp.notDisplayTotalDefect == 0">
+                        <div class="issue-header" [ngClass]="{'has-border-bottom':!defectTp.isShowIssueList || defectTp.notDisplayTotalDefect == 0,'has-no-border-bottom':defectTp.isShowIssueList && defectTp.notDisplayTotalDefect > 0}">
+                          <div class="issue-title">
+                            <h3>{{defectTp.category}}<span style="font-size:0.8rem"> (not located visually)</span></h3>
+                            <div [ngStyle]="{background: defectTp.defectNumBgColor, color: defectTp.defectNumFontColor}">{{defectTp.notDisplayTotalDefect}}</div>
+                          </div>
+                          <div class="show-hide-breakdown">
+                            <button (click)='showOrHideIssueList(defectTp)'>{{defectTp.showOrHideBreakdown}}</button>
+                          </div>
+                        </div>
+                        <clr-accordion class="issue-list" *ngIf='defectTp.isShowIssueList'>
+                          <clr-accordion-panel *ngFor='let defectType of defectTp.defectList' [hidden]="defectType.notDisplayElements.length == 0">
+                            <clr-accordion-title class="issue-accordion-title" (click)='openNotDisplayElePanel(defectType, defectTp)'>
+                              <cds-icon shape="eye" status='info' class="eyeIcon"></cds-icon>
+                              <span class="defectTypeName">{{defectType.title}}</span>
+                              <cds-icon shape="angle" direction="right" class="expend-icon" [ngClass]="{'panel-open': defectType.panelOpen,'panel-close':!defectType.panelOpen}"></cds-icon> 
+                              <div class="ele-length">{{defectType.notDisplayElements.length}}</div>                   
+                            </clr-accordion-title>
+                            <clr-accordion-content *clrIfExpanded>
+                              <app-summary [defectTypeElements]="defectType.notDisplayElements" [category]="defectType.category"></app-summary>
                             </clr-accordion-content>
                           </clr-accordion-panel>
                         </clr-accordion>
@@ -162,11 +191,15 @@
         <div class="signpost-item">
             <div class="trigger-item" >
                 <clr-signpost>
-                    <div class="num-btn" clrSignpostTrigger id='numberSign'>{{numberSign}}</div>
-                    <clr-signpost-content class="signpost-content" [clrPosition]="signpostPosition" *clrIfOpen>
-                        <h5 class="sign-title">{{defectName}}</h5>
+                    <div class="num-btn1" clrSignpostTrigger id='numberSign' *ngIf="eleDisplay !== 'none'">{{numberSign}}</div>
+                    <div class="num-btn2" clrSignpostTrigger id='numberSign' *ngIf="eleDisplay == 'none'">{{numberSign}}</div>
+                    <clr-signpost-content class="signpost-container" [clrPosition]="signpostPosition" *clrIfOpen>
+                        <h5 class="sign-title">
+                          <span>{{defectName}}</span>
+                          <span *ngIf="eleDisplay == 'none'" class="displayTip"> (Hidden element)</span>
+                        </h5>
                         <!-- <app-summary class="signpost-tip" [(currentPage)]='numberSign' [defectTypeElements]='visibleEle'></app-summary> -->
-                        <app-summary class="signpost-tip" [defectTypeElements]='visibleEle'></app-summary>
+                        <app-summary class="signpost-tip" [defectTypeElements]='visibleEle' [category]="defectCategory"></app-summary>
                     </clr-signpost-content>
                 </clr-signpost>
             </div>

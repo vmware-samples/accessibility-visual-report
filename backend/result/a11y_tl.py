@@ -136,10 +136,9 @@ def getResultReportPath(console_create_day,console_uuid):
 
 def getResultReportURL(result_utility_type,console_create_day,console_uuid):
     result_report_url=getResultReportPath(console_create_day,console_uuid)
+    result_report_url=join_folders([VTAAS_SSL_SERVER,'reports',result_report_url])
     if(result_utility_type=='internal'):
-        result_report_url=join_folders([VTAAS_SSL_SERVER+':9003',result_report_url,'accessibilityreports'])
-    else:
-        result_report_url=join_folders([VTAAS_SSL_SERVER,'reports',result_report_url])
+        result_report_url+='/accessibilityreports'
     return result_report_url
 
 def getAccessibilityReportFullPath(result_utility_type,accessibility_report_path):

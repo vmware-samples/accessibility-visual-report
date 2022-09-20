@@ -77,6 +77,8 @@
     elementIds: string[];
     defectTypeElements: defectTypelement[];
     panelOpen: boolean;
+    notDisplayElements: defectTypelement[];
+    xpath: string[]
   }
 
   export interface defectTypelement {
@@ -85,7 +87,8 @@
     sevirity: string;
     description: string;
     action: string;
-    code: string;
+    code?: string;
+    xpath?: string;
     elementId: string;
     elementObject: object;
   }
@@ -99,7 +102,9 @@
         category: '',
         elementIds: [],
         defectTypeElements: [],
-        panelOpen: false
+        panelOpen: false,
+        notDisplayElements: [],
+        xpath: []
       }
     }
   }

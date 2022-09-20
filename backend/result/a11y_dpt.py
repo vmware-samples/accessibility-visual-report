@@ -26,7 +26,7 @@ def saveAccessibilityResult(result_utility_type,uuid,user,result_type,screenshot
         status_code=702
     return status_code,error_message
 
-def getAccessibilityResult(result_utility_type,result_type,result_api_types,user,result_test_event_type,console_uuid,console_create_day,result_screenshot_uid,result_element_list,result_iframe_list):
+def getAccessibilityResult(result_utility_type,result_type,result_api_types,user,result_test_event_type,result_test_url_count,console_uuid,console_create_day,result_screenshot_uid,result_element_list,result_iframe_list):
     error_code=0
     error_message=[]
     result_test_id,result_test_run_id,result_script_id,result_script_run_id,result_script_run_env_id,result_screenshot_id=split_screenshot_uid(result_screenshot_uid)
@@ -44,7 +44,7 @@ def getAccessibilityResult(result_utility_type,result_type,result_api_types,user
             print('Aggregating accessibility result from db ...')
             if((result_script_id>0)and(result_script_run_id>0)):
                 test_is_replay=1
-            error_code,error_message,test_start_time,test_end_time,test_url_count,result_info=getAccessibilityResultFromDB(result_type,user,result_test_event_type,result_test_id,result_test_run_id,result_screenshot_uid,error_message)
+            error_code,error_message,test_start_time,test_end_time,test_url_count,result_info=getAccessibilityResultFromDB(result_type,user,result_test_event_type,result_test_url_count,result_test_id,result_test_run_id,result_screenshot_uid,error_message)
             if(error_code!=0):
                 return error_code,error_message,result_report_url
         else:

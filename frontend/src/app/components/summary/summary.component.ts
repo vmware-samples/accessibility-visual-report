@@ -17,6 +17,12 @@ export class SummaryComponent implements OnInit {
   @Input()
   defectTypeElements;
 
+  @Input()
+  category;
+
+  @Input()
+  defectTypeXpath: string[];
+
   element : any = null;
   issueOnTitle : string = "";
 
@@ -49,19 +55,25 @@ export class SummaryComponent implements OnInit {
 
   ngOnInit(): void {
     // delay 300ms to avoid out of sync
-    setInterval(()=>{
+    setTimeout(()=>{
       let newCurrentPage = Number(document.getElementById('numberSign').innerText);
       if (newCurrentPage != this.currentPage) {
-        // console.log(this.currentPage, this.defectTypeElements)
         this.gotoPage(newCurrentPage);
       }
     },300)
   }
 
   gotoPage(i) {
+    let lenPage = this.defectTypeElements.length;
+    if (i < 1) {
+      i = 1;
+    } else if ( i > lenPage) {
+      i = lenPage;
+    }
+    console.log("Will got to page: "+ String(i));
     this.currentPage = i;
     this.element = this.defectTypeElements[this.currentPage-1];
-    this.issueOnTitle = "Issue "+this.currentPage +"/" + this.defectTypeElements.length
+    this.issueOnTitle = this.category + ' ' + this.currentPage +"/" + lenPage
     this.liveAnnouncer.announce( "You are now on: "+ this.issueOnTitle.replace("/"," of "))
   }
 }

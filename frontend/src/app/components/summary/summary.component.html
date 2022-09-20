@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 
-<span>
+<div *ngIf="element">
   <button class="btn btn-sm btn-link pagination-first" aria-label="Go To Fist" id="myFirst" [disabled]="currentPage==1"
     (click)="gotoPage(1)">
     <cds-icon shape="step-forward-2" direction="Down"></cds-icon>
@@ -22,9 +22,30 @@
     [disabled]="currentPage==defectTypeElements.length" (click)="gotoPage(defectTypeElements.length)">
     <cds-icon shape="step-forward-2" direction="Up"></cds-icon>
   </button>
-</span>
+  <!-- <div class="signpost-triggers-wrapper notDisplayElements" *ngIf="notDisplayElements != 0">
+    <div class="signpost-trigger-demo">
+        <div class="signpost-item">
+          <div class="trigger-item">
+            <clr-signpost>
+                <div class="info-circle" 
+                        clrSignpostTrigger>
+                        {{notDisplayElements}}
+                </div>
+                <clr-signpost-content [clrPosition]="'right-middle'" *clrIfOpen class="notDisplayEleNumContent">
+                  <h5 *ngIf="notDisplayElements - defectTypeXpath.length > 0">*{{notDisplayElements - defectTypeXpath.length}} elements are duplicated.</h5>
+                  <h5 *ngIf="defectTypeXpath.length > 0">*{{defectTypeXpath.length}} elements are not displayed:</h5>
+                  <div *ngFor="let xpath of defectTypeXpath; let i = index">
+                    {{i + 1 + '、 ' + xpath}}
+                  </div>
+                </clr-signpost-content>
+            </clr-signpost>
+          </div>
+        </div>
+    </div>
+  </div> -->
+</div>
 
-<div *ngIf="element">
+<div *ngIf="element" class="issue-content">
   <div class="sevirity">
     <div class="sevirity-value">
       <span class="element-title">WCAG Conformance Level: </span>
@@ -46,9 +67,14 @@
     <span class="element-title">Description: </span>
     <span>{{element.description}}</span>
   </div>
-  <div class="source-code">
+  <div class="source-code" *ngIf="element.code">
     <span class="element-title">Source Code: </span>
     <div (click)='codeMapping()'>{{element.code}}
+    </div>
+  </div>
+  <div class="source-code" *ngIf="element.xpath">
+    <span class="element-title">Xpath: </span>
+    <div (click)='codeMapping()'>{{element.xpath}}
     </div>
   </div>
 
@@ -58,7 +84,7 @@
   </div>
 </div>
 
-<span>
+<div *ngIf="element">
   <button class="btn btn-sm btn-link pagination-first" aria-label="Go To Fist" id="myFirst" [disabled]="currentPage==1"
     (click)="gotoPage(1)">
     <cds-icon shape="step-forward-2" direction="Down"></cds-icon>
@@ -78,4 +104,4 @@
     [disabled]="currentPage==defectTypeElements.length" (click)="gotoPage(defectTypeElements.length)">
     <cds-icon shape="step-forward-2" direction="Up"></cds-icon>
   </button>
-</span>
+</div>

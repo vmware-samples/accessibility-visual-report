@@ -401,5 +401,7 @@ def a11y_task_detail(task_id, task_info=None):
 
 # fetch web page content
 def get_web_page(myurl=''):
-    r = requests.get(myurl)
+    # handle MissingSchema behind a nginx proxy :/ -> :// & :/// -> ://
+    myurl = myurl.replace(':/','://').replace(':///','://')
+    r = requests.get(myurl, verify=False)
     return r

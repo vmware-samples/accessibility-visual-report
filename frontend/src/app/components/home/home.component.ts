@@ -46,16 +46,20 @@ export class HomeComponent implements OnInit {
   eyeHide: boolean = false;
   isShowIssueList: boolean = false;
   defectTypeList: any[];
+  notDisplayDefectTypeList: any[];
   defectList: Defect[];
   totalIssue: number = 0;
   alldefects: any[];
   visibleEle: any[];
   numberSign: number = 1;
   defectName: string;
+  defectCategory: string;
   signpostPosition: string = 'bottom-right';
   isMemuExpanded: boolean = true;
   isTabPanelTopage: boolean = false;
   selectElement: any;
+  isIncorrectUrl: boolean = false;
+  eleDisplay: string = '';
 
   constructor(
     private liveAnnouncer: LiveAnnouncer,
@@ -106,6 +110,9 @@ export class HomeComponent implements OnInit {
       await this.element_mapping.vavr.init(this.schema_mapping.reports, this.selectedUrl);
       this.pageTitle = this.element_mapping.vavr.report.pageTitle;
       this.originalUrl = this.element_mapping.vavr.report.originalUrl;
+      if(this.originalUrl.indexOf('http') == -1) {
+        this.isIncorrectUrl = true;
+      }
       // query default results
       this.getTestResults();
     }
@@ -119,18 +126,28 @@ export class HomeComponent implements OnInit {
 
     this.popOutInImg = 'images/collapse.svg';
     document.getElementById('report-tagged-iframe').style.width = window.innerWidth - 390 + 'px';
+    const _this = this;
+    window.frames["report-tagged-iframe"].document.addEventListener("scroll", function() {
+      _this.changePositionOfSignpost();
+    })
+
   }
 
   insertStyleIntoPage(){
     let allDocsOfPages:Document[] = Object.values(this.element_mapping.vavr.xpath.IframeDocs);
     allDocsOfPages.forEach( doc => {
+      var meta = doc.querySelector("meta[http-equiv='Content-Security-Policy']");
+      if(meta) {
+        meta.setAttribute('content', "default-src *  data: blob: 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline'; img-src * data: blob: 'unsafe-inline'; frame-src *; style-src * data: blob: 'unsafe-inline'; font-src * data: blob: 'unsafe-inline';");
+      }
       //insert style into iframe
       var style = doc.createElement("style");
       style.type = "text/css";
       try{
-      　　style.appendChild(doc.createTextNode(".dashed-border-sign{outline:#C92100 dashed 2px!important}"));
-          style.appendChild(doc.createTextNode(".solid-border-sign{outline:#C92100 solid 6px!important}"));
+      　　style.appendChild(doc.createTextNode(".dashed-border-sign{outline:3px dashed #C92100!important}"));
+          style.appendChild(doc.createTextNode(".solid-border-sign{outline:6px solid #C92100!important}"));
           style.appendChild(doc.createTextNode("button:focus,a:focus{5px auto -webkit-focus-ring-color!important}"));
+          style.appendChild(doc.createTextNode("*{scroll-margin-top: 180px!important;}"));
       }catch(ex){
           console.log("Visual Report is not supported by Browser.")
       　　// style.styleSheet.cssText = ".dashed-border-sign{outline:#C92100 dashed 2px!important;};.solid-border-sign{outline:#C92100 solid 6px!important;}";//IE
@@ -145,45 +162,135 @@ export class HomeComponent implements OnInit {
           event.preventDefault();
         });
       });
-      $(doc.querySelectorAll("input[type='submit']")).each(function () {
+      $(doc.querySelectorAll("input, button")).each(function () {
         $(this).click(function (event) {
           event.preventDefault();
         });
       })
+      $(doc.querySelectorAll("[type='submit']")).each(function () {
+        $(this).closest("form").submit(function(e){
+          e.preventDefault();
+        })
+      });
     });
   }
 
   displaySignpostToPage(){
     const _this = this;
     let allDocsOfPages:Document[] = Object.values(this.element_mapping.vavr.xpath.IframeDocs);
-    allDocsOfPages.forEach( doc => {
+
+    allDocsOfPages.forEach( (doc, index) => {
       doc.addEventListener("click",function(event) {
-        _this.displaySignpost(event);
+        const currentFrameAbsolutePosition = _this.currentFrameAbsolutePosition(doc);
+        _this.displaySignpost(event, currentFrameAbsolutePosition.x, currentFrameAbsolutePosition.y);
+        
       });
       doc.addEventListener("keydown",function(event) {
         if(event.keyCode == 27 && _this.isTabPanelTopage){
           _this.selectElement.focus();
           _this.isTabPanelTopage = false;
         }
+      });
+      doc.addEventListener("scroll", function() {
+        _this.changePositionOfSignpost();
       })
      });
 
+  }
+  //当前iframe相对于浏览器的位置
+  currentFrameAbsolutePosition(doc) {
+    var ele = doc.getElementById("newCreatScript");
+    var top = doc.getElementById('currIframeOffsetTop');
+    var left = doc.getElementById('currIframeOffsetLeft');
+    if(ele) {
+      ele.parentNode.removeChild(top);
+      ele.parentNode.removeChild(left);
+      ele.parentNode.removeChild(ele);
+    }
+
+    var script = doc.createElement('script');
+    script.type = 'text/javascript';
+    script.setAttribute("id", "newCreatScript");
+    var content = '(function() {'
+    + 'let currentWindow = window;'
+    + 'let currentParentWindow;'
+    + 'let positions = [];'
+    + 'let rect;'
+    + 'while (currentWindow !== window.top) {'
+    +   'currentParentWindow = currentWindow.parent;'
+    +   'for (let idx = 0; idx < currentParentWindow.frames.length; idx++)'
+    +     'if (currentParentWindow.frames[idx] === currentWindow) {'
+    +       "for (let frameElement of currentParentWindow.document.getElementsByTagName('iframe')) {"
+    +         'if (frameElement.contentWindow === currentWindow) {'
+    +           'rect = frameElement.getBoundingClientRect();'
+    +           'positions.push({x: rect.x, y: rect.y});'
+    +         '}'
+    +       '}'
+    +       'currentWindow = currentParentWindow;'
+    +       'break;'
+    +     '}'
+    + '}'
+    + 'positions.reduce((accumulator, currentValue) => {'
+    +   'return {'
+    +    'x: accumulator.x + currentValue.x,'
+    +     'y: accumulator.y + currentValue.y'
+    +   '};'
+    + '}, { x: 0, y: 0 });'
+    + 'let xList = [];'
+    + 'let yList = [];'
+    + 'positions.forEach(value => {'
+    +   'xList.push(value.x);'
+    +   'yList.push(value.y);'
+    + '});'
+    + 'let sumX;'
+    + 'let sumY;'
+    + 'sumX = xList.reduce((total, value) => {'
+    +   'return total + value;'
+    + '}, 0);'
+    + 'sumY = yList.reduce((total, value) => {'
+    +   'return total + value;'
+    + '}, 0);'
+    + 'var div1=document.createElement("div");'
+    + 'div1.id = "currIframeOffsetLeft";'
+    + 'div1.innerText = sumX;'
+    + 'var div2=document.createElement("div");'
+    + 'div2.id = "currIframeOffsetTop";'
+    + 'div2.innerText = sumY;'
+    + 'document.body.appendChild(div1);'
+    + 'document.body.appendChild(div2);'
+    + "div1.style.opacity = '0';"
+    + "div2.style.opacity = '0';"
+    + '})()'
+              
+    script.text = content;
+    doc.body.appendChild(script); 
+    const currIframeOffsetLeft = Number(doc.getElementById('currIframeOffsetLeft').innerText);
+    const currIframeOffsetTop = Number(doc.getElementById('currIframeOffsetTop').innerText);
+    return {x: currIframeOffsetLeft, y: currIframeOffsetTop};
+  }
+
+  backToHomePage() {
+    this.pageTitle = '';
+    this.originalUrl = '';
+    const targetUrl =  window.location.origin + window.location.pathname;
+    window.open(targetUrl, '_self');
   }
 
   getTestResults() {
     this.defectList = this.element_mapping.vavr.report.defects;
     const categoryGroup = groupBy(this.defectList, d => d.category);
-
     this.defectTypeList = [];
     let m = 0;
     for(let key in categoryGroup) {
       let defectList: Defect[] = categoryGroup[key];
       let totalDefect = 0;
+      let notDisplayTotalDefect = 0;
       for(var i = 0; i<defectList.length; i++) {
         defectList[i].defectTypeElements = [];
-        totalDefect += defectList[i].elementIds.filter(e => e !== "-1").length;
-        for(var j = 0; j<defectList[i].elementIds.length; j++) {
-          const element_info = this.element_mapping.vavr.report.elements.find(ele => {return ele.elementId == defectList[i].elementIds[j]});
+        defectList[i].notDisplayElements = [];
+
+        for(var j = 0; j < Array.from(new Set(defectList[i].elementIds)).length; j++) {
+          const element_info = this.element_mapping.vavr.report.elements.find(ele => {return ele.elementId == Array.from(new Set(defectList[i].elementIds))[j]});
           if(element_info && element_info.elementId !== "-1") {
             defectList[i].defectTypeElements.push({
               name: defectList[i].name,
@@ -193,25 +300,47 @@ export class HomeComponent implements OnInit {
               action: this.element_mapping.vavr.report.docs[defectList[i].name].actions,
               code: element_info.code,
               elementId: element_info.elementId,
-              elementObject: element_info.elementObject
+              elementObject: element_info.elementObject,
             })
+            
             defectList[i].panelOpen = false;
+          } else {
+            for(var n = 0; n < defectList[i].xpath.length; n++) {
+              defectList[i].notDisplayElements.push({
+                name: defectList[i].name,
+                title: defectList[i].title,
+                sevirity: defectList[i].sevirity,
+                description: this.element_mapping.vavr.report.docs[defectList[i].name].summary,
+                action: this.element_mapping.vavr.report.docs[defectList[i].name].actions,
+                xpath: defectList[i].xpath[n],
+                elementId: element_info.elementId,
+                elementObject: element_info.elementObject,
+              })
+            }
           }
         }
+        totalDefect += defectList[i].defectTypeElements.length;
+        notDisplayTotalDefect += defectList[i].notDisplayElements.length;
       }
       let eyeHide = true;
       let defectNumBgColor = '#FFB565';
       let defectNumFontColor ='#000000';
       if(m == 0) {
         eyeHide = false;
+      }
+      if(key == 'Issues') {
         defectNumBgColor = '#C92100';
         defectNumFontColor = '#FFFFFF';
+      } else if(key == 'Alerts') {
+        defectNumBgColor = '#FFB565';
+        defectNumFontColor ='#000000';
       }
-      remove(defectList, d => d.defectTypeElements.length == 0);
+      // remove(defectList, d => d.defectTypeElements.length == 0);
       this.defectTypeList.push({
           category: key,
           defectList: defectList,
           totalDefect: totalDefect,
+          notDisplayTotalDefect: notDisplayTotalDefect,
           defectNumBgColor: defectNumBgColor,
           defectNumFontColor: defectNumFontColor,
           eyeHide: eyeHide,
@@ -220,13 +349,15 @@ export class HomeComponent implements OnInit {
           isShowIssueList: false,
           showOrHideBreakdown: 'Show ' +key+' breakdown'  
         });
+      
       m++;
     }
+    this.notDisplayDefectTypeList = JSON.parse(JSON.stringify(this.defectTypeList));
 
-    this.syncSelectionFormPanelToPage();
+    this.syncSelectionFromPanelToPage();
   }
 
-  syncSelectionFormPanelToPage(defectTp=null) {
+  syncSelectionFromPanelToPage(defectTp=null) {
     if (defectTp) {
       defectTp.eyeHideArialLabel= (defectTp.eyeHide?'Hide ':'Show ')+ defectTp.totalDefect +' '+ defectTp.category +' on page';
       defectTp.eyeHideDoneArialLabel= defectTp.totalDefect +' '+ defectTp.category +' '+(defectTp.eyeHide?'shown':'hidden');  
@@ -240,17 +371,22 @@ export class HomeComponent implements OnInit {
         this.alldefects = concat(this.alldefects, visibleTypeDefects[i].defectList[j].defectTypeElements);
       }
     }
-    this.removeAddAndborderStyleToEle(this.alldefects);
+    this.setIdAttributeToEle(this.alldefects);
   }
 
-  removeAddAndborderStyleToEle(alldefects) {
+  setIdAttributeToEle(alldefects) {
     this.element_mapping.vavr.report.elements.map(elt => {
       if (elt.elementId != "-1") {
         elt.elementObject.removeAttribute('element-id');
         elt.elementObject.classList.remove('dashed-border-sign');
         elt.elementObject.classList.remove('solid-border-sign');
+        if(elt.elementObject.style.outline == '6px solid rgb(201, 33, 0)') {
+          elt.elementObject.style.outline = null;
+        }
       }
     });
+    const signpostTriggersWrapper = document.getElementById('signpost-triggers-wrapper');
+    signpostTriggersWrapper.style.display = 'none';
 
     const eleGrop = groupBy(alldefects, d => d.elementId);
     let m = 1;
@@ -261,7 +397,27 @@ export class HomeComponent implements OnInit {
       if (m==1) {
         this.element_mapping.vavr.xpath.activeElement = ele;
       }
+
+      if(ele.getBoundingClientRect().top + ele.offsetHeight > -6 &&  ele.getBoundingClientRect().top + ele.offsetHeight < 0) {
+        ele.style.top = -ele.offsetHeight + 10 + 'px';
+      }
+      if(ele.getBoundingClientRect().left + ele.offsetWidth > -6 && ele.getBoundingClientRect().left + ele.offsetWidth < 0) {
+        ele.style.left = -ele.offsetWidth + 10 + 'px';
+      }
       ele.classList.add('dashed-border-sign');
+      if(window.getComputedStyle(ele).opacity == '0') {
+        ele.style.opacity = '1';
+      }
+
+      if(ele.tagName.toLowerCase() == 'a' && ele.innerText == '') {
+        ele.style.display = 'block';
+      }
+      const parentEle = getComputedStyle(ele.parentElement, null);
+      if(ele.getBoundingClientRect().width == ele.parentElement.getBoundingClientRect().width
+        && parentEle.borderStyle == 'none' && parentEle.outlineStyle == 'none' && parentEle.padding == '0px') {   
+        ele.parentElement.style.padding = '3px';
+      }
+      
       ele.setAttribute('element-id', m);
       ele.setAttribute('data-vavrid', key);
       m++;
@@ -269,101 +425,219 @@ export class HomeComponent implements OnInit {
     }
   }
 
-  displaySignpost(event) {
+  displaySignpost(event, currIframeOffsetLeft, currIframeOffsetTop) {
     const solidBorderSign = event.toElement || event.srcElement;
-    if(solidBorderSign && solidBorderSign.className.indexOf('dashed-border-sign') !== -1) {
+    if(solidBorderSign.hasAttribute('for')) {
+      solidBorderSign.removeAttribute('for');
+    }
+    if(solidBorderSign && solidBorderSign.className && 
+      ((typeof(solidBorderSign.className) == 'string' && solidBorderSign.className.indexOf('dashed-border-sign') !== -1)
+      || (solidBorderSign.className.baseVal && solidBorderSign.className.baseVal.indexOf('dashed-border-sign') !== -1))) {
       this.removeClass(this.element_mapping.vavr.xpath.activeElement, 'solid-border-sign');
+      if(this.element_mapping.vavr.xpath.activeElement.style.outline == 'rgb(201, 33, 0) solid 6px') {
+        this.element_mapping.vavr.xpath.activeElement.style.outline = null;
+      }
       this.element_mapping.vavr.xpath.activeElement = solidBorderSign;
+      
       this.addClass(solidBorderSign, 'solid-border-sign');
-      this.appendSignPostToEle(solidBorderSign);
+      
+      if(window.getComputedStyle(solidBorderSign).outlineStyle !== 'solid') {
+        solidBorderSign.style = solidBorderSign.style.cssText + "outline:#C92100 solid 6px!important";
+      }
+      this.appendSignPostToEle(solidBorderSign, currIframeOffsetLeft, currIframeOffsetTop);
+    } else if(solidBorderSign && (!solidBorderSign.className || solidBorderSign.className.baseVal == '' || (typeof(solidBorderSign.className) == 'string' 
+          && solidBorderSign.className.indexOf('dashed-border-sign') == -1)
+          || (solidBorderSign.className.baseVal && solidBorderSign.className.baseVal.indexOf('dashed-border-sign') == -1))
+          && $(solidBorderSign).closest('.dashed-border-sign')[0] != null) {
+      this.removeClass(this.element_mapping.vavr.xpath.activeElement, 'solid-border-sign');
+      if(this.element_mapping.vavr.xpath.activeElement.style.outline == 'rgb(201, 33, 0) solid 6px') {
+        this.element_mapping.vavr.xpath.activeElement.style.outline = null;
+      }
+      this.element_mapping.vavr.xpath.activeElement = solidBorderSign.closest('.dashed-border-sign');
+      this.addClass(solidBorderSign.closest('.dashed-border-sign'), 'solid-border-sign');
+      if(window.getComputedStyle(solidBorderSign.closest('.dashed-border-sign')).outlineStyle !== 'solid') {
+        solidBorderSign.closest('.dashed-border-sign').style = solidBorderSign.closest('.dashed-border-sign').style.cssText + "outline:#C92100 solid 6px!important";
+      }
+      this.appendSignPostToEle(solidBorderSign.closest('.dashed-border-sign'), currIframeOffsetLeft, currIframeOffsetTop);
     }
   }
 
-  appendSignPostToEle(solidBorderSign) {
+  appendSignPostToEle(solidBorderSign, currIframeOffsetLeft, currIframeOffsetTop) {
     const signpostTriggersWrapper = document.getElementById('signpost-triggers-wrapper');
     signpostTriggersWrapper.style.display = 'block';
 
-    this.fixedSignpost(solidBorderSign, signpostTriggersWrapper);
-
+    this.fixedSignpost(solidBorderSign, signpostTriggersWrapper, currIframeOffsetLeft, currIframeOffsetTop);
     this.numberSign = Number(solidBorderSign.getAttribute('element-id'));
     document.getElementById('numberSign').innerText = String(this.numberSign);
+      
     this.defectName = this.visibleEle.find(d => d.elementId == this.element_mapping.vavr.xpath.activeElement.getAttribute('data-vavrid')).name;
+    this.defectCategory = this.defectList.find(n => n.name == this.defectName).category;
   }
 
-
-
-  fixedSignpost(solidBorderSign, signpostTriggersWrapper) {
-    let stwOffsetleft;
-    if(this.floating == false && this.rightToPage == false && this.isMemuExpanded) {
-      stwOffsetleft = solidBorderSign.getBoundingClientRect().left + 390;
-    } else {
-      stwOffsetleft = solidBorderSign.getBoundingClientRect().left;
-    }
-
-    const stwOffsetTop = solidBorderSign.getBoundingClientRect().top;
-    const stwOffsetHeight = solidBorderSign.offsetHeight;
-    const stwOffsetWidth = solidBorderSign.offsetWidth;
-    const signpostHeight = 480;
-    const signpostWidth = 370;
+  fixedSignpost(solidBorderSign, signpostTriggersWrapper, currIframeOffsetLeft, currIframeOffsetTop) {
+    const menuContentWidth = 420;
+    const stwOffsetleft = currIframeOffsetLeft + solidBorderSign.getBoundingClientRect().left;
+    const stwOffsetTop = currIframeOffsetTop + solidBorderSign.getBoundingClientRect().top;
+    const stwOffsetHeight = solidBorderSign.offsetHeight? solidBorderSign.offsetHeight: 0;
+    const stwOffsetWidth = solidBorderSign.offsetWidth? solidBorderSign.offsetWidth: 0;
+    const signpostHeight = 490;
+    const signpostWidth = 440;
     const totalHeight = stwOffsetTop + stwOffsetHeight + signpostHeight;
     const totalWidth = stwOffsetleft + stwOffsetWidth + signpostWidth;
     const windowWidth = document.documentElement.clientWidth;
     const windowHeight = document.documentElement.clientHeight;
     let subtractWidth;
-    if(document.getElementById('menu-content-fixed').offsetWidth == 390) {
+    const subtractHeight = 10;
+
+    if(document.getElementById('menu-content-fixed').offsetWidth == menuContentWidth) {
       if(this.floating || this.rightToPage) {
         subtractWidth = 10;
-      } else if(document.getElementById('menu-content-fixed').offsetWidth == 390) {
+      } else if(document.getElementById('menu-content-fixed').offsetWidth == menuContentWidth) {
         subtractWidth = 17;
       }
     } else {
       subtractWidth = 10;
     }
 
-    if(totalHeight < windowHeight && totalWidth < windowWidth) {
-      this.signpostPosition = 'bottom-right';
-      signpostTriggersWrapper.style.top =  stwOffsetTop + stwOffsetHeight - 10 + 'px';
-      signpostTriggersWrapper.style.left = stwOffsetleft - subtractWidth + 'px';
-    } else if(totalHeight > windowHeight && signpostHeight > stwOffsetTop && totalWidth > windowWidth) {
-      this.signpostPosition = 'left-middle';
-      signpostTriggersWrapper.style.top =  stwOffsetTop - 10 + 'px';
-      signpostTriggersWrapper.style.left = stwOffsetleft - subtractWidth + 'px';
-    } else if(totalHeight > windowHeight && signpostHeight > stwOffsetTop && totalWidth < windowWidth) {
-      this.signpostPosition = 'right-middle';
-      signpostTriggersWrapper.style.top =  stwOffsetTop - 10 + 'px';
-      signpostTriggersWrapper.style.left = stwOffsetleft + stwOffsetWidth - subtractWidth + 'px';
-    } else if(totalHeight > windowHeight && signpostHeight < stwOffsetTop  && totalWidth < windowWidth) {
-      this.signpostPosition = 'top-right';
-      signpostTriggersWrapper.style.top =  stwOffsetTop - 10 + 'px';
-      signpostTriggersWrapper.style.left = stwOffsetleft - subtractWidth + 'px';
-    } else if(totalHeight > windowHeight && signpostHeight < stwOffsetTop && totalWidth > windowWidth) {
-      this.signpostPosition = 'top-left';
-      signpostTriggersWrapper.style.top =  stwOffsetTop - 10 + 'px';
-      signpostTriggersWrapper.style.left = stwOffsetleft - subtractWidth + 'px';
-    } else if(totalHeight < windowHeight && totalWidth > windowWidth) {
-      this.signpostPosition = 'bottom-left';
-      signpostTriggersWrapper.style.top =  stwOffsetTop + stwOffsetHeight - 10 + 'px';
-      signpostTriggersWrapper.style.left = stwOffsetleft - subtractWidth + 'px';
-    }
-    const e = document.createEvent("MouseEvents");
-    e.initEvent("click", true, true);
-    document.getElementById("numberSign").dispatchEvent(e);
-    document.getElementById("numberSign").dispatchEvent(e);
+    //页面元素是否是可见的
+    const io = new IntersectionObserver(([obj]) => {
+      //0为不可见，被遮挡了
+      const isNotVisible = obj.intersectionRatio == 0;
+      this.eleDisplay = '';
+      if((window.getComputedStyle(solidBorderSign).position != 'fixed' && solidBorderSign.offsetParent === null) 
+        || window.getComputedStyle(solidBorderSign).display == 'none'
+        || (!isNotVisible && window.getComputedStyle(solidBorderSign).visibility == 'hidden')
+        || (solidBorderSign.getBoundingClientRect().left + solidBorderSign.offsetWidth) < 0
+        || isNotVisible
+      ) {
+        this.eleDisplay = 'none';
+        this.signpostPosition = 'bottom-right';
+        signpostTriggersWrapper.style.top = currIframeOffsetTop + 10 + 'px';
+        signpostTriggersWrapper.style.left = currIframeOffsetLeft + 10 + 'px';
+      } else if (totalHeight < windowHeight && solidBorderSign.getBoundingClientRect().left < 0 && solidBorderSign.getBoundingClientRect().left + solidBorderSign.offsetWidth > 0) {
+        this.signpostPosition = 'right-bottom';
+        signpostTriggersWrapper.style.top =  stwOffsetTop + stwOffsetHeight - subtractHeight + 'px';
+        signpostTriggersWrapper.style.left = stwOffsetleft + stwOffsetWidth - subtractWidth + 'px';
+      } else if(totalHeight < windowHeight && totalWidth < windowWidth && stwOffsetleft !== 0 && stwOffsetleft !== menuContentWidth) {
+        this.signpostPosition = 'bottom-right';
+        signpostTriggersWrapper.style.top =  stwOffsetTop + stwOffsetHeight - subtractHeight + 'px';
+        signpostTriggersWrapper.style.left = stwOffsetleft - subtractWidth + 'px';
+      } else if(totalHeight < windowHeight && totalWidth < windowWidth && (stwOffsetleft == 0 || stwOffsetleft == menuContentWidth)) {
+        this.signpostPosition = 'right-bottom';
+        signpostTriggersWrapper.style.top =  stwOffsetTop + stwOffsetHeight - subtractHeight + 'px';
+        signpostTriggersWrapper.style.left = stwOffsetleft + stwOffsetWidth - subtractWidth + 'px';
+      } else if(totalHeight > windowHeight && signpostHeight > stwOffsetTop && totalWidth > windowWidth) {
+        this.signpostPosition = 'left-middle';
+        signpostTriggersWrapper.style.top =  stwOffsetTop - subtractHeight + 'px';
+        signpostTriggersWrapper.style.left = stwOffsetleft - subtractWidth + 'px';
+      } else if(totalHeight > windowHeight && signpostHeight > stwOffsetTop && totalWidth < windowWidth) {
+        this.signpostPosition = 'right-middle';
+        signpostTriggersWrapper.style.top =  stwOffsetTop - subtractHeight + 'px';
+        signpostTriggersWrapper.style.left = stwOffsetleft + stwOffsetWidth - subtractWidth + 'px';
+      } else if(totalHeight > windowHeight && signpostHeight < stwOffsetTop  && totalWidth < windowWidth && stwOffsetleft !== 0 && stwOffsetleft !== menuContentWidth) {
+        this.signpostPosition = 'top-right';
+        signpostTriggersWrapper.style.top =  stwOffsetTop - subtractHeight + 'px';
+        signpostTriggersWrapper.style.left = stwOffsetleft - subtractWidth + 'px';
+      } else if(totalHeight > windowHeight && signpostHeight < stwOffsetTop  && totalWidth < windowWidth && (stwOffsetleft == 0 || stwOffsetleft == menuContentWidth)) {
+        this.signpostPosition = 'top-right';
+        signpostTriggersWrapper.style.top =  stwOffsetTop - subtractHeight + 'px';
+        signpostTriggersWrapper.style.left = stwOffsetleft + stwOffsetWidth - subtractWidth + 'px';
+      } else if(totalHeight > windowHeight && signpostHeight < stwOffsetTop && totalWidth > windowWidth && stwOffsetleft > signpostWidth) {
+        this.signpostPosition = 'top-left';
+        signpostTriggersWrapper.style.top =  stwOffsetTop - subtractHeight + 'px';
+        signpostTriggersWrapper.style.left = stwOffsetleft - subtractWidth + 'px';
+      } else if(totalHeight > windowHeight && signpostHeight < stwOffsetTop && totalWidth > windowWidth && stwOffsetleft < signpostWidth) {
+        this.signpostPosition = 'top-right';
+        signpostTriggersWrapper.style.top =  stwOffsetTop - subtractHeight + 'px';
+        signpostTriggersWrapper.style.left = stwOffsetleft - subtractWidth + 'px';
+      } else if(totalHeight < windowHeight && totalWidth > windowWidth && stwOffsetleft > signpostWidth) {
+        this.signpostPosition = 'bottom-left';
+        signpostTriggersWrapper.style.top =  stwOffsetTop + stwOffsetHeight - subtractHeight + 'px';
+        signpostTriggersWrapper.style.left = stwOffsetleft - subtractWidth + 'px';
+      } else if(totalHeight < windowHeight && totalWidth > windowWidth && stwOffsetleft < signpostWidth) {
+        this.signpostPosition = 'bottom-right';
+        signpostTriggersWrapper.style.top =  stwOffsetTop + stwOffsetHeight - subtractHeight + 'px';
+        signpostTriggersWrapper.style.left = stwOffsetleft - subtractWidth + 'px';
+      }
+
+      const sTWrapperLeft = signpostTriggersWrapper.style.left;
+      const sTWrapperLeftNum = Number(sTWrapperLeft.substring(0, sTWrapperLeft.length -2));
+      if(this.isMemuExpanded && !this.floating && !this.rightToPage) {
+        if(sTWrapperLeftNum < menuContentWidth) {
+          signpostTriggersWrapper.style.left = sTWrapperLeftNum + 20 + 'px';
+        }
+      } else if(!this.isMemuExpanded) {
+        if(sTWrapperLeftNum < 0) {
+          signpostTriggersWrapper.style.left = sTWrapperLeftNum + 20 + 'px';
+        }
+      }
+
+      const e = document.createEvent("MouseEvents");
+      e.initEvent("click", true, true);
+      document.getElementById("numberSign").dispatchEvent(e);
+      document.getElementById("numberSign").dispatchEvent(e);
+    })
+    io.observe(solidBorderSign);
   }
 
   addAndRemoveBorderStyle(allDashborderElement, elementId) {
-    this.removeClass(this.element_mapping.vavr.xpath.activeElement, 'solid-border-sign');
     for(var i = 0; i< allDashborderElement.length; i++) {
-      if(Number(allDashborderElement[i].getAttribute('element-id')) == elementId){
-        this.element_mapping.vavr.xpath.activeElement = allDashborderElement[i];
-        this.addClass(allDashborderElement[i], 'solid-border-sign');
-        this.appendSignPostToEle(allDashborderElement[i]);
+      if(Number(allDashborderElement[i].elementObject.getAttribute('element-id')) == elementId){
+        let beforeSolidEleTop = this.getActiveElePosition().y + this.element_mapping.vavr.xpath.activeElement.getBoundingClientRect().top;
+        this.removeClass(this.element_mapping.vavr.xpath.activeElement, 'solid-border-sign');
+        if(this.element_mapping.vavr.xpath.activeElement.style.outline == 'rgb(201, 33, 0) solid 6px') {
+          this.element_mapping.vavr.xpath.activeElement.style.outline = null;
+        }
+        this.element_mapping.vavr.xpath.activeElement = allDashborderElement[i].elementObject;
+
+        //页面元素是否是可见的
+        const io = new IntersectionObserver(([obj]) => {
+          //0为不可见，被遮挡了
+          const isNotVisible = obj.intersectionRatio == 0;
+          const activeElement = this.element_mapping.vavr.xpath.activeElement;
+          this.addClass(activeElement, 'solid-border-sign');
+          if(window.getComputedStyle(activeElement).outlineStyle !== 'solid') {
+            activeElement.style = activeElement.style.cssText + "outline:#C92100 solid 6px!important";
+          }
+
+          let currSolidEleTop = this.getActiveElePosition().y + activeElement.getBoundingClientRect().top;
+          const windowHeight = document.documentElement.clientHeight;
+          
+          if(!isNotVisible && ((beforeSolidEleTop < windowHeight && currSolidEleTop > windowHeight) 
+            || (beforeSolidEleTop > 0 && currSolidEleTop < 0) || (beforeSolidEleTop < 0 && currSolidEleTop < 0))
+            && (activeElement.getBoundingClientRect().left + activeElement.offsetWidth) > 0
+          ) {
+            activeElement.scrollIntoView({behavior: 'smooth'});
+          }
+          this.appendSignPostToEle(activeElement, this.getActiveElePosition().x, this.getActiveElePosition().y);
+        })
+
+        io.observe(this.element_mapping.vavr.xpath.activeElement);
       }
     }
-    this.defectName = this.visibleEle.find(d => d.elementId == this.element_mapping.vavr.xpath.activeElement.getAttribute('data-vavrid')).name;
+    setTimeout(() => {
+      const activeDefect = this.visibleEle.find(d => d.elementId == this.element_mapping.vavr.xpath.activeElement.getAttribute('data-vavrid'));
+      this.defectName = activeDefect?.name;
+    }, 300);
   }
 
-  openPanel(defectType, defectTypes) {
+  getActiveElePosition() {
+    let solidElePosition;
+    let allDocsOfPages:Document[] = Object.values(this.element_mapping.vavr.xpath.IframeDocs);
+    
+    allDocsOfPages.forEach((doc, index) => {
+      const eleId = String(this.element_mapping.vavr.xpath.activeElement.getAttribute('element-id'));
+      if(doc.querySelectorAll('[element-id="' + eleId + '"]').length > 0) {
+        solidElePosition = this.currentFrameAbsolutePosition(doc);
+      } 
+    })
+    return solidElePosition;
+  }
+
+  openPanel(defectType, defectTp) {
+    if(defectTp.eyeHide){
+      return;
+    }
     if(defectType.panelOpen) {
       defectType.panelOpen = false;
       this.removeClass(this.element_mapping.vavr.xpath.activeElement, 'solid-border-sign');
@@ -371,16 +645,27 @@ export class HomeComponent implements OnInit {
       signpostTriggersWrapper.style.display = 'none';
     } else {
       defectType.panelOpen = true;
-      for(let t of defectTypes.filter(d => d.name !== defectType.name)){
+      for(let t of defectTp.defectList.filter(d => d.name !== defectType.name)){
         t.panelOpen = false;
       }
-      this.removeAddAndborderStyleToEle(defectType.defectTypeElements);
+      this.setIdAttributeToEle(defectType.defectTypeElements);
 
-      const allDashborderElement:HTMLElement[] = [];
-      this.element_mapping.vavr.report.elements.map(elt => {
-        if (elt.elementId != "-1") { allDashborderElement.push(elt.elementObject); }
-      });
-      this.addAndRemoveBorderStyle(allDashborderElement, 1);
+      // const allDashborderElement:HTMLElement[] = [];
+      // this.element_mapping.vavr.report.elements.map(elt => {
+      //   if (elt.elementId != "-1") { allDashborderElement.push(elt.elementObject); }
+      // });
+      this.addAndRemoveBorderStyle(this.visibleEle, 1);
+    }
+    this.liveAnnouncer.announce("test")
+  }
+  openNotDisplayElePanel(defectType, defectTp) {
+    if(defectType.panelOpen) {
+      defectType.panelOpen = false;
+    } else {
+      defectType.panelOpen = true;
+      for(let t of defectTp.defectList.filter(d => d.name !== defectType.name)){
+        t.panelOpen = false;
+      }
     }
     this.liveAnnouncer.announce("test")
   }
@@ -389,38 +674,38 @@ export class HomeComponent implements OnInit {
   }
 
   @HostListener('document:click', ['$event']) onClick(event) {
-    // const allDashborderElement = window.frames["report-tagged-iframe"].document.getElementsByClassName('dashed-border-sign');
-    const allDashborderElement:HTMLElement[] = [];
     if(this.originalUrl) {
-      this.element_mapping.vavr.report.elements.map(elt => {
-        if (elt.elementId != "-1") { allDashborderElement.push(elt.elementObject); }
-      });
-      if(this.hasClass(event.srcElement, 'pagination-next', true)) {
-        const nextElementId = Number(this.element_mapping.vavr.xpath.activeElement.getAttribute('element-id')) + 1;
-        console.log(nextElementId)
-        this.addAndRemoveBorderStyle(allDashborderElement, nextElementId);
-      } else if(this.hasClass(event.srcElement, 'pagination-previous', true)) {
-        const previousElementId = Number(this.element_mapping.vavr.xpath.activeElement.getAttribute('element-id')) - 1;
-        console.log(previousElementId)
-        this.addAndRemoveBorderStyle(allDashborderElement, previousElementId);
-      } else if(this.hasClass(event.srcElement, 'pagination-first', true)) {
-        console.log(1)
-        this.addAndRemoveBorderStyle(allDashborderElement, 1);
-      } else if(this.hasClass(event.srcElement, 'pagination-last', true)) {
-        console.log(allDashborderElement.length)
-        this.addAndRemoveBorderStyle(allDashborderElement, allDashborderElement.length);
+      const displayedDefectsSections = document.getElementsByClassName('displayedDefectsSection');
+      const signpostContainer = document.getElementsByClassName('signpost-container')[0];
+      for(var i = 0; i < displayedDefectsSections.length; i++) {
+        if(displayedDefectsSections[i].contains(event.srcElement) || (signpostContainer && signpostContainer.contains(event.srcElement))) {
+          if(this.hasClass(event.srcElement, 'pagination-next', true)) {
+            const nextElementId = Number(this.element_mapping.vavr.xpath.activeElement.getAttribute('element-id')) + 1;
+            this.addAndRemoveBorderStyle(this.visibleEle, nextElementId);
+          } else if(this.hasClass(event.srcElement, 'pagination-previous', true)) {
+            const previousElementId = Number(this.element_mapping.vavr.xpath.activeElement.getAttribute('element-id')) - 1;
+            console.log(previousElementId)
+            this.addAndRemoveBorderStyle(this.visibleEle, previousElementId);
+          } else if(this.hasClass(event.srcElement, 'pagination-first', true)) {
+            console.log(1)
+            this.addAndRemoveBorderStyle(this.visibleEle, 1);
+          } else if(this.hasClass(event.srcElement, 'pagination-last', true)) {
+            console.log(this.visibleEle.length)
+            this.addAndRemoveBorderStyle(this.visibleEle, this.visibleEle.length);
+          }
+        }
       }
     }
   }
 
   hasClass( element,cName,checkAncestor=false){
     if (!checkAncestor) {
-      return !!(element? element.className.match( new RegExp( "(\\s|^)" + cName + "(\\s|$)") ): false);
+      return !!(element && typeof(element.className) == 'string'? element.className.match( new RegExp( "(\\s|^)" + cName + "(\\s|$)") ): element && typeof(element.className) !== 'string' && element.className.baseVal? element.className.baseVal.match( new RegExp( "(\\s|^)" + cName + "(\\s|$)") ): false);
     } else {
       if (!element) {
         return false;
       } else {
-        if (element.className.match( new RegExp( "(\\s|^)" + cName + "(\\s|$)") ) ) {
+        if ((typeof(element.className) == 'string' && element.className.match( new RegExp( "(\\s|^)" + cName + "(\\s|$)") ))  || (element.className.baseVal && element.className.baseVal.match( new RegExp( "(\\s|^)" + cName + "(\\s|$)") ))) {
           return true;
         } else {
           return this.hasClass(element.parentElement,cName,true);
@@ -431,13 +716,23 @@ export class HomeComponent implements OnInit {
 
   addClass( element,cName ){
     if( !this.hasClass( element,cName ) ){
-      element.className += " " + cName;
+      if(typeof(element.className) == 'string') {
+        element.className += " " + cName;
+      } else if(typeof(element.className) !== 'string' && element.className.baseVal) {
+        element.className.baseVal += " " + cName;
+      }
+      
     };
   }
 
   removeClass( elements,cName ){
     if( this.hasClass( elements,cName ) ){
-      elements.className = elements.className.replace( new RegExp( "(\\s|^)" + cName + "(\\s|$)" )," " );
+      if(typeof(elements.className) == 'string') {
+        elements.className = elements.className.replace( new RegExp( "(\\s|^)" + cName + "(\\s|$)" )," " );
+      } else if(typeof(elements.className) !== 'string' && elements.className.baseVal) {
+        elements.className.baseVal = elements.className.baseVal.replace( new RegExp( "(\\s|^)" + cName + "(\\s|$)" )," " );
+      }
+      
     }
   }
 
@@ -477,7 +772,7 @@ export class HomeComponent implements OnInit {
     const signpostTriggersWrapper = document.getElementById('signpost-triggers-wrapper');
     if(signpostTriggersWrapper.style.display == 'block') {
       setTimeout(() => {
-        this.fixedSignpost(this.element_mapping.vavr.xpath.activeElement, signpostTriggersWrapper);
+        this.fixedSignpost(this.element_mapping.vavr.xpath.activeElement, signpostTriggersWrapper, this.getActiveElePosition().x, this.getActiveElePosition().y);
       }, 500)
     }
   }
@@ -542,6 +837,11 @@ export class HomeComponent implements OnInit {
     this.selectedUrl = report.pageUrl;
     this.pageTitle = report.pageTitle;
     this.originalUrl = report.originalUrl;
+    if(this.originalUrl.indexOf('http') == -1) {
+      this.isIncorrectUrl = true;
+    } else {
+      this.isIncorrectUrl = false;
+    }
   }
 
   isHaveInvalidUrls = false;
@@ -701,8 +1001,9 @@ export class HomeComponent implements OnInit {
       this.defectTypeList.forEach(defectTp => {
         const defectType = defectTp.defectList.find(e => e.name == selectDefectTypeName);
         if(defectType) {
-          this.removeAddAndborderStyleToEle(defectType.defectTypeElements);
+          this.setIdAttributeToEle(defectType.defectTypeElements);
           this.element_mapping.vavr.xpath.activeElement.setAttribute('tabindex', 0);
+          this.element_mapping.vavr.xpath.activeElement.scrollIntoView();
           this.element_mapping.vavr.xpath.activeElement.focus();
           this.isTabPanelTopage = true;
         }
@@ -712,7 +1013,7 @@ export class HomeComponent implements OnInit {
       this.defectTypeList.forEach(defectTp => {
         const defectType = defectTp.defectList.find(e => e.name == selectDefectTypeName);
         if(defectType) {
-          this.openPanel(defectType, defectTp.defectList);
+          this.openPanel(defectType, defectTp);
         }
       })
     }

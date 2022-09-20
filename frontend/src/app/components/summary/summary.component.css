@@ -30,6 +30,35 @@
     font-weight: bold;
     color: #000000;
 }
+.notDisplayElements{
+    display: inline-block;
+}
+.notDisplayElements .info-circle{
+    width: 20px;
+    height: 20px;
+    text-align: center;
+    line-height: 20px;
+    border-radius: 50%;
+    color: #0072a3;
+    border: 1px solid #0072a3;
+    cursor: pointer;
+}
+::ng-deep .notDisplayEleNumContent .signpost-content-body{
+    height: auto!important;
+    max-height: 490px!important;
+}
+.signpost-content{
+    width: 440px;
+    max-width: 24rem!important;
+}
+.notDisplayEleNumContent h5{
+    color: #000;
+    margin-bottom: 1rem;
+    margin-top: 0;
+}
+.issue-content{
+    padding: 0 10px;
+}
 .description{
     margin-bottom: .6rem;
 }

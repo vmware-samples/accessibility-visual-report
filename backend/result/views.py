@@ -109,10 +109,11 @@ def get_accessibility_result(request):
                         result_type=request.data.get('result_type','accessibility')
                         result_api_types=request.data.get('result_api_types',['wave'])
                         result_test_event_type=int(str(request.data.get('result_test_event_type',28)))
+                        result_test_url_count=int(str(request.data.get('result_test_url_count',0)))
                         result_element_list=request.data.get('result_element_list',[])
                         result_iframe_list=request.data.get('result_iframe_list',[])
                         result_utility_type=request.data.get('result_utility_type','internal')
-                        error_code,error_message,result_report_url=getAccessibilityResult(result_utility_type,result_type,result_api_types,user,result_test_event_type,console_uuid,console_create_day,result_screenshot_uid,result_element_list,result_iframe_list)
+                        error_code,error_message,result_report_url=getAccessibilityResult(result_utility_type,result_type,result_api_types,user,result_test_event_type,result_test_url_count,console_uuid,console_create_day,result_screenshot_uid,result_element_list,result_iframe_list)
                     else:
                         error_message='user: '+user
                 else:

@@ -4,4 +4,8 @@ frontend/dist/
 frontend/src/assets/accessibility/*
 frontend/.angular/*
 frontend/package-lock.json
+.DS_Store
+frontend/src/assets/report.json
+frontend/src/assets/site*
+frontend/src/assets/files/*
 

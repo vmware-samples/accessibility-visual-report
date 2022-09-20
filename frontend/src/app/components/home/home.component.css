@@ -123,6 +123,15 @@
     border-radius: 4px;
 }
 
+::ng-deep .clr-accordion:not(.clr-stepper-forms) .clr-accordion-panel:last-child .clr-accordion-header{
+    border-bottom: 0 none;   
+}
+
+.issue-list{
+    border-bottom: 1px solid #ccc;
+    border-radius: 4px;
+}
+
 .eyeIcon{
     margin-right: .5rem;
 }
@@ -191,17 +200,50 @@
     overflow: hidden;
     width: 100%;
 }
-.issue-accordion-title div{
+.issue-accordion-title .ele-length{
     float: right;
+    margin-right: .2rem;
+    width: 25px;
+    height: 25px;
+    text-align: center;
+    line-height: 25px;
+    border-radius: 50%;
+    color: #C92100;
+    border: 1px solid #C92100;
+}
+.notDisplayEleContent{
+    padding: 1rem;
+}
+.notDisplayEleContent .info-circle{
     width: 20px;
     height: 20px;
     text-align: center;
     line-height: 20px;
-    border: 1px solid #C92100;
     border-radius: 50%;
+    color: #0072a3;
+    border: 1px solid #0072a3;
+    cursor: pointer;
+    margin-right: 1rem;
+    display: inline-block;
+}
+.notDisplayEleNum{
+    display: inline-block!important;
+    position: static!important;
+}
+::ng-deep .notDisplayEleNumContent .signpost-content-body{
+    height: auto!important;
+    max-height: 490px!important;
+}
+.issue-accordion-title .expend-icon{
+    float: right;
+    transition: all .2s ease-in-out;
     margin-top: 3px;
-    color: #C92100;
-    margin-right: .8rem;
+}
+.panel-open{
+    transform: rotate(180deg);
+}
+.panel-close{
+    transform: rotate(90deg);
 }
 .tagged-iframe{
     border: 0;
@@ -366,10 +408,20 @@
     left: 0;
 }
 
-.num-btn{
+.num-btn1{
     width: 22px;
     height: 22px;
     background-color: #C92100;
+    border-radius: 50%;
+    border: none;
+    color: #fff;
+    text-align: center;
+    line-height: 22px;
+}
+.num-btn2{
+    width: 22px;
+    height: 22px;
+    background-color: #e6c347;
     border-radius: 50%;
     border: none;
     color: #fff;
@@ -460,11 +512,42 @@
     display: none;
 }
 .signpost-content{
-    width: 360px;
-    height: 480px;
+    width: 440px;
+    max-width: 24rem!important;
 }
-::ng-deep .signpost-content-body{
-    height: 480px;
+::ng-deep .signpost-container .signpost-content-body{
+    height: 490px;
+    max-height:fit-content!important;
+}
+.notDisplayEleNumContent h5{
+    color: #000;
+    margin-bottom: 1rem;
+}
+.notDisplayEleNumContent div{
+    margin-bottom: .5rem;
+}
+
+.displayTip{
+    font-weight:500;
+    color: #f32e07;
+}
+
+::ng-deep .clr-accordion-angle{
+    display: none;
+}
+::ng-deep .pagination-first,::ng-deep .pagination-previous,::ng-deep .pagination-next,::ng-deep .pagination-last{
+    min-width: 3rem;
+}
+
+::ng-deep .clr-accordion-status{
+    width: 0px!important;
+}
+
+.none{
+    width: 100%;
+    height: 200px;
+    text-align: center;
+    line-height: 200px;
 }
 
 .visually-hidden {

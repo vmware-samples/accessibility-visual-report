@@ -4,7 +4,7 @@
 <div>
     <textarea clrTextarea placeholder="Separate by newline" [(ngModel)]="inputExtraComments"
         (drop)="dropHandler($event)" (dragover)="dragOverHandler($event)" (dragleave)="dragleaveHandler($event)"
-        (change)="textOnChange()" name="txtDesc" rows="4" cols="65" size="70"
+        (change)="textOnChange()" name="txtDesc" rows="4" cols="65" size="70" disabled
         placeholder="You can enter urls to start on-demand test. 
 Please make sure one url one line, such as
     https://www.google.com
