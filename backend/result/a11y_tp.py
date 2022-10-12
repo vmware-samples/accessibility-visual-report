@@ -42,7 +42,7 @@ accessibility_task_url_json_default = {
             "last_update": None
         }
 accessibility_task_url_element_list_default={
-            "wave_categories": ["error"], 
+            "wave_categories": ["error"，"contrast"], 
             "element_locator": "selectors", 
             "elements": [],
             "issue_items_filter_type": "include", 
