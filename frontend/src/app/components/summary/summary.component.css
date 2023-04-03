@@ -65,9 +65,31 @@
 .source-code{
     margin-bottom: .6rem;
 }
+.element-code{
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -webkit-line-clamp: 6;
+}
 ::ng-deep .datagrid .datagrid-table .datagrid-placeholder-container{
     border-top-color: #f5f0f0;
 }
 ::ng-deep .datagrid .datagrid-cell{
     line-height: 1.2rem;
+}
+.contrast{
+    overflow: hidden;
+}
+.contrast-btn{
+    color: #0079B8;
+    border: none;
+    text-transform: uppercase;
+    background: none;
+    font-size: 11px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-left: 2rem;
+    float: right;
+}
+.contrast-btn:hover{
+    color: #034b71;
 }

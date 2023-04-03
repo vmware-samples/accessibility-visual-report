@@ -1,13 +1,13 @@
 // Copyright 2022 VMware, Inc.
 // SPDX-License-Identifier: MIT
 
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit } from '@angular/core';
 import * as $ from 'jquery';
 import '@cds/core/accordion/register.js';
 import { SchemaMappingService } from '../../services/schema_mapping.service';
 import { ElementMappingService } from '../../services/element_mapping.service';
 import { Defect } from '../../model/report';
-import { groupBy, remove, concat } from 'lodash';
+import { groupBy, sortBy, concat } from 'lodash';
 import { ReportService } from '../../services/report.service';
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { DragDropComponent } from '../dialogs/drag-drop/drag-drop.component';
@@ -60,18 +60,20 @@ export class HomeComponent implements OnInit {
   selectElement: any;
   isIncorrectUrl: boolean = false;
   eleDisplay: string = '';
+  testHistories: string[];
 
   constructor(
     private liveAnnouncer: LiveAnnouncer,
     private schema_mapping: SchemaMappingService,
     private element_mapping: ElementMappingService,
-    private reportService: ReportService) {
+    private reportService: ReportService,
+    private elementRef: ElementRef) {
    }
 
   async ngOnInit() {
     this.isLoading = true;
     // URL Params
-    // Expected URL example: localhosts/?url=https://localhost/assets/sample_data/sample.html&report=https://localhost/assets/sample_data/report.json
+    // Expected URL example: https://localhost/?url=https://localhost/assets/sample_data/sample.html&report=https://localhost/assets/sample_data/report.json
     let urlParams = this.element_mapping.getUrlParams(window.location.href);
     let url = urlParams.has('url')? urlParams.get('url'): '';
     let report = urlParams.has('report')?urlParams.get('report'):'';
@@ -117,7 +119,6 @@ export class HomeComponent implements OnInit {
       this.getTestResults();
     }
     this.isLoading = false;
-
     // insert style into iframe
     this.insertStyleIntoPage();
 
@@ -125,32 +126,38 @@ export class HomeComponent implements OnInit {
     this.displaySignpostToPage();
 
     this.popOutInImg = 'images/collapse.svg';
-    document.getElementById('report-tagged-iframe').style.width = window.innerWidth - 390 + 'px';
-    const _this = this;
-    window.frames["report-tagged-iframe"].document.addEventListener("scroll", function() {
-      _this.changePositionOfSignpost();
-    })
-
+    let reportIframe = this.elementRef.nativeElement.querySelector('#report-tagged-iframe');
+    reportIframe.style.width = window.innerWidth - 390 + 'px';
+    
+    setTimeout(() => {
+      const issueAccordionTitles: any = this.elementRef.nativeElement.querySelectorAll('.issue-accordion-title');
+      let firstTypeIssues = [];
+      $(issueAccordionTitles).each(function() {
+        if($(this).parents('clr-accordion-panel') && $(this).parents('clr-accordion-panel').css('display') !== 'none') {
+          firstTypeIssues.push($(this));
+        }
+      })
+      if(firstTypeIssues.length > 0) {
+        firstTypeIssues[0].click();
+      }
+    }, 300);
   }
 
   insertStyleIntoPage(){
     let allDocsOfPages:Document[] = Object.values(this.element_mapping.vavr.xpath.IframeDocs);
-    allDocsOfPages.forEach( doc => {
-      var meta = doc.querySelector("meta[http-equiv='Content-Security-Policy']");
-      if(meta) {
-        meta.setAttribute('content', "default-src *  data: blob: 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline'; img-src * data: blob: 'unsafe-inline'; frame-src *; style-src * data: blob: 'unsafe-inline'; font-src * data: blob: 'unsafe-inline';");
-      }
+    allDocsOfPages.forEach( (doc, index) => {
       //insert style into iframe
       var style = doc.createElement("style");
       style.type = "text/css";
       try{
-      　　style.appendChild(doc.createTextNode(".dashed-border-sign{outline:3px dashed #C92100!important}"));
-          style.appendChild(doc.createTextNode(".solid-border-sign{outline:6px solid #C92100!important}"));
+      　　style.appendChild(doc.createTextNode(".dashed-border-sign{border:3px dashed #C92100!important}"));
+          style.appendChild(doc.createTextNode(".solid-border-sign{border:5px solid #C92100!important}"));
           style.appendChild(doc.createTextNode("button:focus,a:focus{5px auto -webkit-focus-ring-color!important}"));
-          style.appendChild(doc.createTextNode("*{scroll-margin-top: 180px!important;}"));
+          style.appendChild(doc.createTextNode("*{-webkit-appearance:none}"));
+          // style.appendChild(doc.createTextNode("*{pointer-events:auto!important}"));
       }catch(ex){
           console.log("Visual Report is not supported by Browser.")
-      　　// style.styleSheet.cssText = ".dashed-border-sign{outline:#C92100 dashed 2px!important;};.solid-border-sign{outline:#C92100 solid 6px!important;}";//IE
+      　　// style.styleSheet.cssText = ".dashed-border-sign{border:#C92100 dashed 2px!important;};.solid-border-sign{border:#C92100 solid 6px!important;}";//IE
       }
       var head = doc.getElementsByTagName("head")[0];
       head.appendChild(style);
@@ -178,9 +185,9 @@ export class HomeComponent implements OnInit {
   displaySignpostToPage(){
     const _this = this;
     let allDocsOfPages:Document[] = Object.values(this.element_mapping.vavr.xpath.IframeDocs);
-
     allDocsOfPages.forEach( (doc, index) => {
       doc.addEventListener("click",function(event) {
+        event.preventDefault();
         const currentFrameAbsolutePosition = _this.currentFrameAbsolutePosition(doc);
         _this.displaySignpost(event, currentFrameAbsolutePosition.x, currentFrameAbsolutePosition.y);
         
@@ -191,9 +198,17 @@ export class HomeComponent implements OnInit {
           _this.isTabPanelTopage = false;
         }
       });
+
       doc.addEventListener("scroll", function() {
         _this.changePositionOfSignpost();
       })
+      const elems = doc.body.getElementsByTagName("*");
+      const len = elems.length;
+      for (var i=0;i<len;i++) {
+        elems[i].addEventListener("scroll", function() {
+          _this.changePositionOfSignpost();
+        })
+      }
      });
 
   }
@@ -278,83 +293,100 @@ export class HomeComponent implements OnInit {
 
   getTestResults() {
     this.defectList = this.element_mapping.vavr.report.defects;
-    const categoryGroup = groupBy(this.defectList, d => d.category);
-    this.defectTypeList = [];
-    let m = 0;
-    for(let key in categoryGroup) {
-      let defectList: Defect[] = categoryGroup[key];
-      let totalDefect = 0;
-      let notDisplayTotalDefect = 0;
-      for(var i = 0; i<defectList.length; i++) {
-        defectList[i].defectTypeElements = [];
-        defectList[i].notDisplayElements = [];
+    if(this.defectList.length > 0) {
+      const contrast = this.schema_mapping.result_info.find(i => i.url.original_url == this.originalUrl).result.categories.contrast?.items.contrast;
+      const contrastdata = contrast?.contrastdata;
+      const selectors = contrast?.selectors;
+      const categoryGroup = groupBy(this.defectList, d => d.category);
+      this.defectTypeList = [];
+      let m = 0;
+      for(let key in categoryGroup) {
+        let defectList: Defect[] = categoryGroup[key];
+        let totalDefect = 0;
+        let notDisplayTotalDefect = 0;
+        for(var i = 0; i<defectList.length; i++) {
+          defectList[i].defectTypeElements = [];
+          defectList[i].notDisplayElements = [];
 
-        for(var j = 0; j < Array.from(new Set(defectList[i].elementIds)).length; j++) {
-          const element_info = this.element_mapping.vavr.report.elements.find(ele => {return ele.elementId == Array.from(new Set(defectList[i].elementIds))[j]});
-          if(element_info && element_info.elementId !== "-1") {
-            defectList[i].defectTypeElements.push({
-              name: defectList[i].name,
-              title: defectList[i].title,
-              sevirity: defectList[i].sevirity,
-              description: this.element_mapping.vavr.report.docs[defectList[i].name].summary,
-              action: this.element_mapping.vavr.report.docs[defectList[i].name].actions,
-              code: element_info.code,
-              elementId: element_info.elementId,
-              elementObject: element_info.elementObject,
-            })
-            
-            defectList[i].panelOpen = false;
-          } else {
-            for(var n = 0; n < defectList[i].xpath.length; n++) {
-              defectList[i].notDisplayElements.push({
+          for(var j = 0; j < Array.from(new Set(defectList[i].elementIds)).length; j++) {
+            const element_info = this.element_mapping.vavr.report.elements.find(ele => {return ele.elementId == Array.from(new Set(defectList[i].elementIds))[j]});
+            if(element_info && element_info.elementId !== "-1") {
+              const defectTypeElement = {
                 name: defectList[i].name,
                 title: defectList[i].title,
                 sevirity: defectList[i].sevirity,
                 description: this.element_mapping.vavr.report.docs[defectList[i].name].summary,
                 action: this.element_mapping.vavr.report.docs[defectList[i].name].actions,
-                xpath: defectList[i].xpath[n],
+                code: element_info.code.length > 1000? element_info.code.substring(0, 100) + element_info.code.substring(element_info.code.length - 50): element_info.code,
                 elementId: element_info.elementId,
                 elementObject: element_info.elementObject,
-              })
+                contrast: null
+              }
+              if(contrastdata && defectList[i].name == 'contrast') {
+                for(var d = 0; d < selectors.length; d++) {
+                  if(element_info.elementLocator == selectors[d]) {
+                    defectTypeElement.contrast = contrastdata[d];
+                  }
+                }
+              }
+              
+              defectList[i].defectTypeElements.push(defectTypeElement);
+              defectList[i].panelOpen = false;
+            } else {
+              for(var n = 0; n < defectList[i].xpath.length; n++) {
+                defectList[i].notDisplayElements.push({
+                  name: defectList[i].name,
+                  title: defectList[i].title,
+                  sevirity: defectList[i].sevirity,
+                  description: this.element_mapping.vavr.report.docs[defectList[i].name].summary,
+                  action: this.element_mapping.vavr.report.docs[defectList[i].name].actions,
+                  xpath: defectList[i].xpath[n],
+                  elementId: element_info.elementId,
+                  elementObject: element_info.elementObject,
+                })
+              }
             }
-          }
+          } 
+          defectList[i].defectTypeElements = sortBy(defectList[i].defectTypeElements, item => {return Number(item.elementId)});
+          totalDefect += defectList[i].defectTypeElements.length;
+          notDisplayTotalDefect += defectList[i].notDisplayElements.length;
         }
-        totalDefect += defectList[i].defectTypeElements.length;
-        notDisplayTotalDefect += defectList[i].notDisplayElements.length;
+        let eyeHide = true;
+        let defectNumBgColor = '#FFB565';
+        let defectNumFontColor ='#000000';
+        if(m == 0) {
+          eyeHide = false;
+        }
+        if(key == 'Issues') {
+          defectNumBgColor = '#C92100';
+          defectNumFontColor = '#FFFFFF';
+        } else if(key == 'Alerts') {
+          defectNumBgColor = '#FFB565';
+          defectNumFontColor ='#000000';
+        }
+        // remove(defectList, d => d.defectTypeElements.length == 0);
+        this.defectTypeList.push({
+            category: key,
+            defectList: defectList,
+            totalDefect: totalDefect,
+            notDisplayTotalDefect: notDisplayTotalDefect,
+            defectNumBgColor: defectNumBgColor,
+            defectNumFontColor: defectNumFontColor,
+            eyeHide: eyeHide,
+            eyeHideArialLabel: (eyeHide?'Show ':'Hide ')+ totalDefect +' '+ key +' on page',
+            eyeHideDoneArialLabel:  totalDefect +' '+ key +' '+(eyeHide?'shown':'hidden'),
+            isShowIssueList: false,
+            showOrHideBreakdown:'Show ' + key + ' breakdown'  
+          });
+        
+        m++;
       }
-      let eyeHide = true;
-      let defectNumBgColor = '#FFB565';
-      let defectNumFontColor ='#000000';
-      if(m == 0) {
-        eyeHide = false;
-      }
-      if(key == 'Issues') {
-        defectNumBgColor = '#C92100';
-        defectNumFontColor = '#FFFFFF';
-      } else if(key == 'Alerts') {
-        defectNumBgColor = '#FFB565';
-        defectNumFontColor ='#000000';
-      }
-      // remove(defectList, d => d.defectTypeElements.length == 0);
-      this.defectTypeList.push({
-          category: key,
-          defectList: defectList,
-          totalDefect: totalDefect,
-          notDisplayTotalDefect: notDisplayTotalDefect,
-          defectNumBgColor: defectNumBgColor,
-          defectNumFontColor: defectNumFontColor,
-          eyeHide: eyeHide,
-          eyeHideArialLabel: (eyeHide?'Show ':'Hide ')+ totalDefect +' '+ key +' on page',
-          eyeHideDoneArialLabel:  totalDefect +' '+ key +' '+(eyeHide?'shown':'hidden'),
-          isShowIssueList: false,
-          showOrHideBreakdown: 'Show ' +key+' breakdown'  
-        });
-      
-      m++;
-    }
-    this.notDisplayDefectTypeList = JSON.parse(JSON.stringify(this.defectTypeList));
+      this.notDisplayDefectTypeList = JSON.parse(JSON.stringify(this.defectTypeList));
+      this.defectTypeList[0].isShowIssueList = true;
+      this.defectTypeList[0].showOrHideBreakdown = 'Hide ' + this.defectTypeList[0].category + ' breakdown';
 
-    this.syncSelectionFromPanelToPage();
+      this.syncSelectionFromPanelToPage();
+    }
   }
 
   syncSelectionFromPanelToPage(defectTp=null) {
@@ -362,16 +394,23 @@ export class HomeComponent implements OnInit {
       defectTp.eyeHideArialLabel= (defectTp.eyeHide?'Hide ':'Show ')+ defectTp.totalDefect +' '+ defectTp.category +' on page';
       defectTp.eyeHideDoneArialLabel= defectTp.totalDefect +' '+ defectTp.category +' '+(defectTp.eyeHide?'shown':'hidden');  
       this.liveAnnouncer.announce( defectTp.eyeHideDoneArialLabel)
-      defectTp.eyeHide=!defectTp.eyeHide;
-    }
-    const visibleTypeDefects = this.defectTypeList.filter(d => !d.eyeHide);
-    this.alldefects = [];
-    for(var i = 0; i < visibleTypeDefects.length; i++) {
-      for(var j = 0; j < visibleTypeDefects[i].defectList.length; j++) {
-        this.alldefects = concat(this.alldefects, visibleTypeDefects[i].defectList[j].defectTypeElements);
+      defectTp.eyeHide = !defectTp.eyeHide;
+      if(defectTp.eyeHide == true) {
+        this.alldefects = [];
       }
     }
-    this.setIdAttributeToEle(this.alldefects);
+    if(defectTp && defectTp.isShowIssueList) {
+      const visibleTypeDefects = this.defectTypeList.filter(d => !d.eyeHide);
+      this.alldefects = [];
+      for(var i = 0; i < visibleTypeDefects.length; i++) {
+        for(var j = 0; j < visibleTypeDefects[i].defectList.length; j++) {
+          if(visibleTypeDefects[i].defectList[j].panelOpen) {
+            this.alldefects = concat(this.alldefects, visibleTypeDefects[i].defectList[j].defectTypeElements);
+          }
+        }
+      }
+      this.setIdAttributeToEle(this.alldefects);
+    }
   }
 
   setIdAttributeToEle(alldefects) {
@@ -380,14 +419,13 @@ export class HomeComponent implements OnInit {
         elt.elementObject.removeAttribute('element-id');
         elt.elementObject.classList.remove('dashed-border-sign');
         elt.elementObject.classList.remove('solid-border-sign');
-        if(elt.elementObject.style.outline == '6px solid rgb(201, 33, 0)') {
-          elt.elementObject.style.outline = null;
-        }
       }
     });
-    const signpostTriggersWrapper = document.getElementById('signpost-triggers-wrapper');
-    signpostTriggersWrapper.style.display = 'none';
 
+    this.element_mapping.vavr.xpath.activeElement = null;
+    const signpostTriggersWrapper = this.elementRef.nativeElement.querySelector('#signpost-triggers-wrapper');
+    signpostTriggersWrapper.style.display = 'none';
+    
     const eleGrop = groupBy(alldefects, d => d.elementId);
     let m = 1;
     this.visibleEle = [];
@@ -404,18 +442,23 @@ export class HomeComponent implements OnInit {
       if(ele.getBoundingClientRect().left + ele.offsetWidth > -6 && ele.getBoundingClientRect().left + ele.offsetWidth < 0) {
         ele.style.left = -ele.offsetWidth + 10 + 'px';
       }
-      ele.classList.add('dashed-border-sign');
+      
       if(window.getComputedStyle(ele).opacity == '0') {
         ele.style.opacity = '1';
       }
-
-      if(ele.tagName.toLowerCase() == 'a' && ele.innerText == '') {
-        ele.style.display = 'block';
+      
+      if(window.getComputedStyle(ele).display == 'inline' && ele.children[0] && ele.innerText == '' && window.getComputedStyle(ele).width == 'auto') {
+        ele.style.display = 'inline-block';
+        if(window.getComputedStyle(ele).width == '0px') {
+          ele.style.display = 'block';
+        }
       }
-      const parentEle = getComputedStyle(ele.parentElement, null);
-      if(ele.getBoundingClientRect().width == ele.parentElement.getBoundingClientRect().width
-        && parentEle.borderStyle == 'none' && parentEle.outlineStyle == 'none' && parentEle.padding == '0px') {   
-        ele.parentElement.style.padding = '3px';
+ 
+      ele.classList.add('dashed-border-sign');
+      
+      if(window.getComputedStyle(ele).opacity !== '0' && window.getComputedStyle(ele)['pointer-events'] == 'none'
+      && this.hasClass(ele, 'dashed-border-sign')) {
+        ele.style['pointer-events'] = 'auto';
       }
       
       ele.setAttribute('element-id', m);
@@ -425,56 +468,49 @@ export class HomeComponent implements OnInit {
     }
   }
 
+
+
   displaySignpost(event, currIframeOffsetLeft, currIframeOffsetTop) {
     const solidBorderSign = event.toElement || event.srcElement;
-    if(solidBorderSign.hasAttribute('for')) {
-      solidBorderSign.removeAttribute('for');
-    }
-    if(solidBorderSign && solidBorderSign.className && 
+    if((solidBorderSign && solidBorderSign.className && 
       ((typeof(solidBorderSign.className) == 'string' && solidBorderSign.className.indexOf('dashed-border-sign') !== -1)
-      || (solidBorderSign.className.baseVal && solidBorderSign.className.baseVal.indexOf('dashed-border-sign') !== -1))) {
-      this.removeClass(this.element_mapping.vavr.xpath.activeElement, 'solid-border-sign');
-      if(this.element_mapping.vavr.xpath.activeElement.style.outline == 'rgb(201, 33, 0) solid 6px') {
-        this.element_mapping.vavr.xpath.activeElement.style.outline = null;
-      }
-      this.element_mapping.vavr.xpath.activeElement = solidBorderSign;
-      
-      this.addClass(solidBorderSign, 'solid-border-sign');
-      
-      if(window.getComputedStyle(solidBorderSign).outlineStyle !== 'solid') {
-        solidBorderSign.style = solidBorderSign.style.cssText + "outline:#C92100 solid 6px!important";
-      }
-      this.appendSignPostToEle(solidBorderSign, currIframeOffsetLeft, currIframeOffsetTop);
+      || (solidBorderSign.className.baseVal && solidBorderSign.className.baseVal.indexOf('dashed-border-sign') !== -1)))
+    ){
+        this.addBorderToCurrElement(solidBorderSign, currIframeOffsetLeft, currIframeOffsetTop);
     } else if(solidBorderSign && (!solidBorderSign.className || solidBorderSign.className.baseVal == '' || (typeof(solidBorderSign.className) == 'string' 
-          && solidBorderSign.className.indexOf('dashed-border-sign') == -1)
-          || (solidBorderSign.className.baseVal && solidBorderSign.className.baseVal.indexOf('dashed-border-sign') == -1))
-          && $(solidBorderSign).closest('.dashed-border-sign')[0] != null) {
-      this.removeClass(this.element_mapping.vavr.xpath.activeElement, 'solid-border-sign');
-      if(this.element_mapping.vavr.xpath.activeElement.style.outline == 'rgb(201, 33, 0) solid 6px') {
-        this.element_mapping.vavr.xpath.activeElement.style.outline = null;
-      }
-      this.element_mapping.vavr.xpath.activeElement = solidBorderSign.closest('.dashed-border-sign');
-      this.addClass(solidBorderSign.closest('.dashed-border-sign'), 'solid-border-sign');
-      if(window.getComputedStyle(solidBorderSign.closest('.dashed-border-sign')).outlineStyle !== 'solid') {
-        solidBorderSign.closest('.dashed-border-sign').style = solidBorderSign.closest('.dashed-border-sign').style.cssText + "outline:#C92100 solid 6px!important";
-      }
-      this.appendSignPostToEle(solidBorderSign.closest('.dashed-border-sign'), currIframeOffsetLeft, currIframeOffsetTop);
+        && solidBorderSign.className.indexOf('dashed-border-sign') == -1)
+        || (solidBorderSign.className.baseVal && solidBorderSign.className.baseVal.indexOf('dashed-border-sign') == -1))
+        && $(solidBorderSign).closest('.dashed-border-sign')[0] != null
+    ){
+        this.addBorderToCurrElement(solidBorderSign.closest('.dashed-border-sign'), currIframeOffsetLeft, currIframeOffsetTop);
     }
   }
 
-  appendSignPostToEle(solidBorderSign, currIframeOffsetLeft, currIframeOffsetTop) {
-    const signpostTriggersWrapper = document.getElementById('signpost-triggers-wrapper');
+  addBorderToCurrElement(solidBorderSign, currIframeOffsetLeft, currIframeOffsetTop) {
+    const beforeSolidEle = this.element_mapping.vavr.xpath.activeElement;
+    this.removeClass(beforeSolidEle, 'solid-border-sign');
+    this.element_mapping.vavr.xpath.activeElement = solidBorderSign;
+    const currSolidEle = solidBorderSign;
+    if(currSolidEle.hasAttribute('for')) {
+      currSolidEle.removeAttribute('for');
+    }
+    this.addClass(currSolidEle, 'solid-border-sign');
+    this.appendSignPostToEle(currSolidEle, currIframeOffsetLeft, currIframeOffsetTop, false);
+  }
+
+  appendSignPostToEle(solidBorderSign, currIframeOffsetLeft, currIframeOffsetTop, isNotVisible) {
+    const signpostTriggersWrapper = this.elementRef.nativeElement.querySelector('#signpost-triggers-wrapper');
     signpostTriggersWrapper.style.display = 'block';
 
-    this.fixedSignpost(solidBorderSign, signpostTriggersWrapper, currIframeOffsetLeft, currIframeOffsetTop);
+    this.fixedSignpost(solidBorderSign, signpostTriggersWrapper, currIframeOffsetLeft, currIframeOffsetTop, isNotVisible);
     this.numberSign = Number(solidBorderSign.getAttribute('element-id'));
-    document.getElementById('numberSign').innerText = String(this.numberSign);
+    this.elementRef.nativeElement.querySelector('#numberSign').innerText = String(this.numberSign);
       
     this.defectName = this.visibleEle.find(d => d.elementId == this.element_mapping.vavr.xpath.activeElement.getAttribute('data-vavrid')).name;
     this.defectCategory = this.defectList.find(n => n.name == this.defectName).category;
   }
 
-  fixedSignpost(solidBorderSign, signpostTriggersWrapper, currIframeOffsetLeft, currIframeOffsetTop) {
+  fixedSignpost(solidBorderSign, signpostTriggersWrapper, currIframeOffsetLeft, currIframeOffsetTop, isNotVisible) {
     const menuContentWidth = 420;
     const stwOffsetleft = currIframeOffsetLeft + solidBorderSign.getBoundingClientRect().left;
     const stwOffsetTop = currIframeOffsetTop + solidBorderSign.getBoundingClientRect().top;
@@ -489,129 +525,172 @@ export class HomeComponent implements OnInit {
     let subtractWidth;
     const subtractHeight = 10;
 
-    if(document.getElementById('menu-content-fixed').offsetWidth == menuContentWidth) {
+    if(this.elementRef.nativeElement.querySelector('#menu-content-fixed').offsetWidth == menuContentWidth) {
       if(this.floating || this.rightToPage) {
         subtractWidth = 10;
-      } else if(document.getElementById('menu-content-fixed').offsetWidth == menuContentWidth) {
+      } else if(this.elementRef.nativeElement.querySelector('#menu-content-fixed').offsetWidth == menuContentWidth) {
         subtractWidth = 17;
       }
     } else {
       subtractWidth = 10;
     }
 
-    //页面元素是否是可见的
-    const io = new IntersectionObserver(([obj]) => {
-      //0为不可见，被遮挡了
-      const isNotVisible = obj.intersectionRatio == 0;
-      this.eleDisplay = '';
-      if((window.getComputedStyle(solidBorderSign).position != 'fixed' && solidBorderSign.offsetParent === null) 
-        || window.getComputedStyle(solidBorderSign).display == 'none'
-        || (!isNotVisible && window.getComputedStyle(solidBorderSign).visibility == 'hidden')
-        || (solidBorderSign.getBoundingClientRect().left + solidBorderSign.offsetWidth) < 0
-        || isNotVisible
-      ) {
-        this.eleDisplay = 'none';
-        this.signpostPosition = 'bottom-right';
-        signpostTriggersWrapper.style.top = currIframeOffsetTop + 10 + 'px';
-        signpostTriggersWrapper.style.left = currIframeOffsetLeft + 10 + 'px';
-      } else if (totalHeight < windowHeight && solidBorderSign.getBoundingClientRect().left < 0 && solidBorderSign.getBoundingClientRect().left + solidBorderSign.offsetWidth > 0) {
-        this.signpostPosition = 'right-bottom';
-        signpostTriggersWrapper.style.top =  stwOffsetTop + stwOffsetHeight - subtractHeight + 'px';
-        signpostTriggersWrapper.style.left = stwOffsetleft + stwOffsetWidth - subtractWidth + 'px';
-      } else if(totalHeight < windowHeight && totalWidth < windowWidth && stwOffsetleft !== 0 && stwOffsetleft !== menuContentWidth) {
-        this.signpostPosition = 'bottom-right';
-        signpostTriggersWrapper.style.top =  stwOffsetTop + stwOffsetHeight - subtractHeight + 'px';
-        signpostTriggersWrapper.style.left = stwOffsetleft - subtractWidth + 'px';
-      } else if(totalHeight < windowHeight && totalWidth < windowWidth && (stwOffsetleft == 0 || stwOffsetleft == menuContentWidth)) {
-        this.signpostPosition = 'right-bottom';
-        signpostTriggersWrapper.style.top =  stwOffsetTop + stwOffsetHeight - subtractHeight + 'px';
-        signpostTriggersWrapper.style.left = stwOffsetleft + stwOffsetWidth - subtractWidth + 'px';
-      } else if(totalHeight > windowHeight && signpostHeight > stwOffsetTop && totalWidth > windowWidth) {
-        this.signpostPosition = 'left-middle';
+    let allDocsOfPages:Document[] = Object.values(this.element_mapping.vavr.xpath.IframeDocs);
+    this.eleDisplay = '';
+    if((!isNotVisible && ((window.getComputedStyle(solidBorderSign).position != 'fixed' && solidBorderSign.offsetParent === null)
+      || window.getComputedStyle(solidBorderSign).display == 'none'
+      || window.getComputedStyle(solidBorderSign).visibility == 'hidden'
+      ||((solidBorderSign.getBoundingClientRect().left + solidBorderSign.offsetWidth + allDocsOfPages[0].documentElement.scrollLeft) < 0
+      || (window.getComputedStyle(solidBorderSign).position == 'static' && solidBorderSign.getBoundingClientRect().left + solidBorderSign.offsetWidth < 0)
+      || solidBorderSign.getBoundingClientRect().left > allDocsOfPages[0].documentElement.scrollWidth
+      || (solidBorderSign.getBoundingClientRect().top + solidBorderSign.offsetHeight + allDocsOfPages[0].documentElement.scrollTop) < 0
+      || (window.getComputedStyle(solidBorderSign).position == 'static' && solidBorderSign.getBoundingClientRect().top + solidBorderSign.offsetHeight < 0)
+      || solidBorderSign.getBoundingClientRect().top > allDocsOfPages[0].documentElement.scrollHeight)))
+      || (isNotVisible && window.getComputedStyle(solidBorderSign).position == 'fixed')
+    ) {
+      this.eleDisplay = 'none';
+      this.signpostPosition = 'bottom-right';
+      signpostTriggersWrapper.style.top = currIframeOffsetTop + 10 + 'px';
+      signpostTriggersWrapper.style.left = currIframeOffsetLeft + 10 + 'px';
+    } else if(solidBorderSign.getBoundingClientRect().left <= 0 && solidBorderSign.getBoundingClientRect().left + solidBorderSign.offsetWidth >= 0) {
+        if(totalHeight <= windowHeight) {
+          this.signpostPosition = 'right-bottom';
+          signpostTriggersWrapper.style.top =  stwOffsetTop + stwOffsetHeight - subtractHeight + 'px';
+          signpostTriggersWrapper.style.left = stwOffsetleft + stwOffsetWidth - subtractWidth + 'px';
+        } else {
+          this.signpostPosition = 'right-top';
+          signpostTriggersWrapper.style.top =  stwOffsetTop - subtractHeight + 'px';
+          signpostTriggersWrapper.style.left = stwOffsetleft + stwOffsetWidth - subtractWidth + 'px';
+        }
+    } else if(totalHeight <= windowHeight && totalWidth <= windowWidth) {
+        if(stwOffsetleft !== 0 && stwOffsetleft !== menuContentWidth) {
+          this.signpostPosition = 'bottom-right';
+          signpostTriggersWrapper.style.top =  stwOffsetTop + stwOffsetHeight - subtractHeight + 'px';
+          signpostTriggersWrapper.style.left = stwOffsetleft - subtractWidth + 'px';
+        } else {
+          this.signpostPosition = 'right-bottom';
+          signpostTriggersWrapper.style.top =  stwOffsetTop + stwOffsetHeight - subtractHeight + 'px';
+          signpostTriggersWrapper.style.left = stwOffsetleft + stwOffsetWidth - subtractWidth + 'px';
+        }
+    } else if(totalHeight >= windowHeight && signpostHeight >= stwOffsetTop && totalWidth >= windowWidth) {
+        if(this.floating == false && this.rightToPage == false) {
+          if((stwOffsetleft - menuContentWidth) <= signpostWidth) {
+            this.signpostPosition = 'right-bottom';
+          } else {
+            this.signpostPosition = 'left-middle';
+          }
+        } else if((this.floating || this.rightToPage) && stwOffsetleft <= signpostWidth){
+          this.signpostPosition = 'right-bottom';
+        }
         signpostTriggersWrapper.style.top =  stwOffsetTop - subtractHeight + 'px';
         signpostTriggersWrapper.style.left = stwOffsetleft - subtractWidth + 'px';
-      } else if(totalHeight > windowHeight && signpostHeight > stwOffsetTop && totalWidth < windowWidth) {
+    } else if(totalHeight >= windowHeight && signpostHeight <= stwOffsetTop  && totalWidth <= windowWidth) {
+        if(stwOffsetleft !== 0 && stwOffsetleft !== menuContentWidth) {
+          this.signpostPosition = 'top-right';
+          signpostTriggersWrapper.style.top =  stwOffsetTop - subtractHeight + 'px';
+          signpostTriggersWrapper.style.left = stwOffsetleft - subtractWidth + 'px';
+        } else {
+          this.signpostPosition = 'top-right';
+          signpostTriggersWrapper.style.top =  stwOffsetTop - subtractHeight + 'px';
+          signpostTriggersWrapper.style.left = stwOffsetleft + stwOffsetWidth - subtractWidth + 'px';
+        }
+    } else if(totalHeight >= windowHeight && signpostHeight <= stwOffsetTop && totalWidth >= windowWidth) {
+        if(stwOffsetleft >= signpostWidth) {
+          this.signpostPosition = 'top-left';
+          signpostTriggersWrapper.style.top =  stwOffsetTop - subtractHeight + 'px';
+          signpostTriggersWrapper.style.left = stwOffsetleft - subtractWidth + 'px';
+        } else {
+          this.signpostPosition = 'top-right';
+          signpostTriggersWrapper.style.top =  stwOffsetTop - subtractHeight + 'px';
+          signpostTriggersWrapper.style.left = stwOffsetleft - subtractWidth + 'px';
+        }
+    } else if(totalHeight <= windowHeight && totalWidth >= windowWidth) {
+        if(stwOffsetleft >= signpostWidth) {
+          this.signpostPosition = 'bottom-left';
+          signpostTriggersWrapper.style.top =  stwOffsetTop + stwOffsetHeight - subtractHeight + 'px';
+          signpostTriggersWrapper.style.left = stwOffsetleft - subtractWidth + 'px';
+        } else {
+          this.signpostPosition = 'bottom-right';
+          signpostTriggersWrapper.style.top =  stwOffsetTop + stwOffsetHeight - subtractHeight + 'px';
+          signpostTriggersWrapper.style.left = stwOffsetleft - subtractWidth + 'px';
+        }
+    } else if(totalHeight >= windowHeight && signpostHeight >= stwOffsetTop && totalWidth <= windowWidth) {
         this.signpostPosition = 'right-middle';
         signpostTriggersWrapper.style.top =  stwOffsetTop - subtractHeight + 'px';
         signpostTriggersWrapper.style.left = stwOffsetleft + stwOffsetWidth - subtractWidth + 'px';
-      } else if(totalHeight > windowHeight && signpostHeight < stwOffsetTop  && totalWidth < windowWidth && stwOffsetleft !== 0 && stwOffsetleft !== menuContentWidth) {
-        this.signpostPosition = 'top-right';
-        signpostTriggersWrapper.style.top =  stwOffsetTop - subtractHeight + 'px';
-        signpostTriggersWrapper.style.left = stwOffsetleft - subtractWidth + 'px';
-      } else if(totalHeight > windowHeight && signpostHeight < stwOffsetTop  && totalWidth < windowWidth && (stwOffsetleft == 0 || stwOffsetleft == menuContentWidth)) {
-        this.signpostPosition = 'top-right';
-        signpostTriggersWrapper.style.top =  stwOffsetTop - subtractHeight + 'px';
-        signpostTriggersWrapper.style.left = stwOffsetleft + stwOffsetWidth - subtractWidth + 'px';
-      } else if(totalHeight > windowHeight && signpostHeight < stwOffsetTop && totalWidth > windowWidth && stwOffsetleft > signpostWidth) {
-        this.signpostPosition = 'top-left';
-        signpostTriggersWrapper.style.top =  stwOffsetTop - subtractHeight + 'px';
-        signpostTriggersWrapper.style.left = stwOffsetleft - subtractWidth + 'px';
-      } else if(totalHeight > windowHeight && signpostHeight < stwOffsetTop && totalWidth > windowWidth && stwOffsetleft < signpostWidth) {
-        this.signpostPosition = 'top-right';
-        signpostTriggersWrapper.style.top =  stwOffsetTop - subtractHeight + 'px';
-        signpostTriggersWrapper.style.left = stwOffsetleft - subtractWidth + 'px';
-      } else if(totalHeight < windowHeight && totalWidth > windowWidth && stwOffsetleft > signpostWidth) {
-        this.signpostPosition = 'bottom-left';
-        signpostTriggersWrapper.style.top =  stwOffsetTop + stwOffsetHeight - subtractHeight + 'px';
-        signpostTriggersWrapper.style.left = stwOffsetleft - subtractWidth + 'px';
-      } else if(totalHeight < windowHeight && totalWidth > windowWidth && stwOffsetleft < signpostWidth) {
-        this.signpostPosition = 'bottom-right';
-        signpostTriggersWrapper.style.top =  stwOffsetTop + stwOffsetHeight - subtractHeight + 'px';
-        signpostTriggersWrapper.style.left = stwOffsetleft - subtractWidth + 'px';
-      }
+    }
 
-      const sTWrapperLeft = signpostTriggersWrapper.style.left;
-      const sTWrapperLeftNum = Number(sTWrapperLeft.substring(0, sTWrapperLeft.length -2));
-      if(this.isMemuExpanded && !this.floating && !this.rightToPage) {
-        if(sTWrapperLeftNum < menuContentWidth) {
-          signpostTriggersWrapper.style.left = sTWrapperLeftNum + 20 + 'px';
-        }
-      } else if(!this.isMemuExpanded) {
-        if(sTWrapperLeftNum < 0) {
-          signpostTriggersWrapper.style.left = sTWrapperLeftNum + 20 + 'px';
-        }
+    const sTWrapperLeft = signpostTriggersWrapper.style.left;
+    const sTWrapperLeftNum = Number(sTWrapperLeft.substring(0, sTWrapperLeft.length -2));
+    if(this.isMemuExpanded && !this.floating && !this.rightToPage) {
+      if(sTWrapperLeftNum <= menuContentWidth) {
+        signpostTriggersWrapper.style.left = sTWrapperLeftNum + 20 + 'px';
       }
+    } else if(!this.isMemuExpanded) {
+      if(sTWrapperLeftNum <= 0) {
+        signpostTriggersWrapper.style.left = sTWrapperLeftNum + 20 + 'px';
+      }
+    }
 
-      const e = document.createEvent("MouseEvents");
-      e.initEvent("click", true, true);
-      document.getElementById("numberSign").dispatchEvent(e);
-      document.getElementById("numberSign").dispatchEvent(e);
-    })
-    io.observe(solidBorderSign);
+    const e = document.createEvent("MouseEvents");
+    e.initEvent("click", true, true);
+    this.elementRef.nativeElement.querySelector("#numberSign").dispatchEvent(e);
+    this.elementRef.nativeElement.querySelector("#numberSign").dispatchEvent(e); 
   }
 
   addAndRemoveBorderStyle(allDashborderElement, elementId) {
     for(var i = 0; i< allDashborderElement.length; i++) {
       if(Number(allDashborderElement[i].elementObject.getAttribute('element-id')) == elementId){
-        let beforeSolidEleTop = this.getActiveElePosition().y + this.element_mapping.vavr.xpath.activeElement.getBoundingClientRect().top;
-        this.removeClass(this.element_mapping.vavr.xpath.activeElement, 'solid-border-sign');
-        if(this.element_mapping.vavr.xpath.activeElement.style.outline == 'rgb(201, 33, 0) solid 6px') {
-          this.element_mapping.vavr.xpath.activeElement.style.outline = null;
-        }
+        const beforeSolidEle = this.element_mapping.vavr.xpath.activeElement;
+        let beforeSolidEleTop = this.getActiveElePosition().y + beforeSolidEle.getBoundingClientRect().top;
+        this.removeClass(beforeSolidEle, 'solid-border-sign');
+        
         this.element_mapping.vavr.xpath.activeElement = allDashborderElement[i].elementObject;
-
         //页面元素是否是可见的
         const io = new IntersectionObserver(([obj]) => {
           //0为不可见，被遮挡了
           const isNotVisible = obj.intersectionRatio == 0;
-          const activeElement = this.element_mapping.vavr.xpath.activeElement;
-          this.addClass(activeElement, 'solid-border-sign');
-          if(window.getComputedStyle(activeElement).outlineStyle !== 'solid') {
-            activeElement.style = activeElement.style.cssText + "outline:#C92100 solid 6px!important";
-          }
-
-          let currSolidEleTop = this.getActiveElePosition().y + activeElement.getBoundingClientRect().top;
-          const windowHeight = document.documentElement.clientHeight;
+          const currActiveElement = this.element_mapping.vavr.xpath.activeElement;
+          this.addClass(currActiveElement, 'solid-border-sign');
           
-          if(!isNotVisible && ((beforeSolidEleTop < windowHeight && currSolidEleTop > windowHeight) 
-            || (beforeSolidEleTop > 0 && currSolidEleTop < 0) || (beforeSolidEleTop < 0 && currSolidEleTop < 0))
-            && (activeElement.getBoundingClientRect().left + activeElement.offsetWidth) > 0
-          ) {
-            activeElement.scrollIntoView({behavior: 'smooth'});
+          let currSolidEleTop = this.getActiveElePosition().y + currActiveElement.getBoundingClientRect().top;
+          const windowHeight = document.documentElement.clientHeight;
+ 
+          let allDocsOfPages:Document[] = Object.values(this.element_mapping.vavr.xpath.IframeDocs);
+          const elems = allDocsOfPages[0].body.getElementsByTagName("*");
+          const len = elems.length;
+          let fixedTopEle = null, fixedBottomEle = null;
+          for (var i=0;i<len;i++) {
+            const computedStyle = window.getComputedStyle(elems[i],null);
+            if (computedStyle.getPropertyValue('position') == 'fixed'
+              && computedStyle.getPropertyValue('display') !== 'none' && Number(computedStyle.getPropertyValue('z-index')) > 0
+              && computedStyle.getPropertyValue('opacity') !== '0'
+              && computedStyle.getPropertyValue('height') !== allDocsOfPages[0].documentElement.clientHeight + 'px') 
+            {
+              if(computedStyle.getPropertyValue('top') == '0px') {
+                fixedTopEle = elems[i];
+              } else if(computedStyle.getPropertyValue('bottom') == '0px') {
+                fixedBottomEle = elems[i];
+              }  
+            }       
           }
-          this.appendSignPostToEle(activeElement, this.getActiveElePosition().x, this.getActiveElePosition().y);
-        })
+          if(fixedTopEle && currSolidEleTop > 0 && currSolidEleTop < fixedTopEle.offsetHeight) {
+            allDocsOfPages[0].documentElement.scrollTop = allDocsOfPages[0].documentElement.scrollTop - fixedTopEle.offsetHeight;
+          } else if(fixedBottomEle && currSolidEleTop > fixedBottomEle.offsetTop) {
+            allDocsOfPages[0].documentElement.scrollTop = allDocsOfPages[0].documentElement.scrollTop + fixedBottomEle.offsetHeight;
+          }
 
+          if(((isNotVisible && window.getComputedStyle(currActiveElement).position !== 'fixed') || (beforeSolidEleTop < windowHeight && currSolidEleTop > windowHeight) 
+            || (beforeSolidEleTop > 0 && currSolidEleTop < 0) || (beforeSolidEleTop < 0 && currSolidEleTop < 0))
+            && window.getComputedStyle(currActiveElement).visibility == 'visible' 
+          ) {
+            currActiveElement.scrollIntoView({block: 'center', behavior: 'instant'});
+            if(this.getActiveElePosition().x + currActiveElement.getBoundingClientRect().left > document.documentElement.clientWidth) { 
+              allDocsOfPages[0].documentElement.scrollLeft = allDocsOfPages[0].documentElement.scrollLeft + 10;
+            }    
+          }
+          this.appendSignPostToEle(currActiveElement, this.getActiveElePosition().x, this.getActiveElePosition().y, false);
+        })
         io.observe(this.element_mapping.vavr.xpath.activeElement);
       }
     }
@@ -624,7 +703,6 @@ export class HomeComponent implements OnInit {
   getActiveElePosition() {
     let solidElePosition;
     let allDocsOfPages:Document[] = Object.values(this.element_mapping.vavr.xpath.IframeDocs);
-    
     allDocsOfPages.forEach((doc, index) => {
       const eleId = String(this.element_mapping.vavr.xpath.activeElement.getAttribute('element-id'));
       if(doc.querySelectorAll('[element-id="' + eleId + '"]').length > 0) {
@@ -636,27 +714,54 @@ export class HomeComponent implements OnInit {
 
   openPanel(defectType, defectTp) {
     if(defectTp.eyeHide){
+      if(defectType.panelOpen) {
+        defectType.panelOpen = false;
+      } else {
+        defectType.panelOpen = true;
+      }
       return;
     }
     if(defectType.panelOpen) {
-      defectType.panelOpen = false;
-      this.removeClass(this.element_mapping.vavr.xpath.activeElement, 'solid-border-sign');
-      const signpostTriggersWrapper = document.getElementById('signpost-triggers-wrapper');
-      signpostTriggersWrapper.style.display = 'none';
+      this.hideAllShowIssues(defectType);
     } else {
       defectType.panelOpen = true;
-      for(let t of defectTp.defectList.filter(d => d.name !== defectType.name)){
-        t.panelOpen = false;
+      for(let d of this.defectTypeList) {
+        for(let t of d.defectList.filter(d => d.name !== defectType.name)){
+          if(t.panelOpen) {
+            t.panelOpen = false;
+          }
+        }
       }
+      let  otherTypeIssues = this.defectTypeList.filter(d => d.category !== defectTp.category);
+      otherTypeIssues.forEach(value =>{
+        value.isShowIssueList = false;
+        value.eyeHide = true;
+        value.showOrHideBreakdown = 'Show ' + value.category + ' breakdown'  
+      })
+      this.notDisplayDefectTypeList.forEach(value =>{
+        value.isShowIssueList = false;
+        value.showOrHideBreakdown = 'Show ' + value.category + ' breakdown'  
+      })
+      
       this.setIdAttributeToEle(defectType.defectTypeElements);
 
-      // const allDashborderElement:HTMLElement[] = [];
-      // this.element_mapping.vavr.report.elements.map(elt => {
-      //   if (elt.elementId != "-1") { allDashborderElement.push(elt.elementObject); }
-      // });
+      this.elementRef.nativeElement.querySelector('#numberSign').innerText = '1';
       this.addAndRemoveBorderStyle(this.visibleEle, 1);
     }
     this.liveAnnouncer.announce("test")
+  }
+
+  hideAllShowIssues(defectType) {
+    defectType.panelOpen = false;
+    const beforeSolidEle = this.element_mapping.vavr.xpath.activeElement;
+    this.removeClass(beforeSolidEle, 'solid-border-sign');
+
+    defectType.defectTypeElements.forEach(element => {
+      element.elementObject.classList.remove("dashed-border-sign");
+    });
+    this.element_mapping.vavr.xpath.activeElement = null;
+    const signpostTriggersWrapper = this.elementRef.nativeElement.querySelector('#signpost-triggers-wrapper');
+    signpostTriggersWrapper.style.display = 'none';
   }
   openNotDisplayElePanel(defectType, defectTp) {
     if(defectType.panelOpen) {
@@ -666,6 +771,17 @@ export class HomeComponent implements OnInit {
       for(let t of defectTp.defectList.filter(d => d.name !== defectType.name)){
         t.panelOpen = false;
       }
+
+      this.defectTypeList.forEach(value =>{
+        value.isShowIssueList = false;
+        value.eyeHide = true;
+        value.showOrHideBreakdown = 'Show ' + value.category + ' breakdown';
+        for(let t of value.defectList.filter(d => d.panelOpen == true)){
+          t.panelOpen = false;
+        } 
+      })  
+      this.alldefects = [];
+      this.setIdAttributeToEle(this.alldefects);
     }
     this.liveAnnouncer.announce("test")
   }
@@ -675,24 +791,26 @@ export class HomeComponent implements OnInit {
 
   @HostListener('document:click', ['$event']) onClick(event) {
     if(this.originalUrl) {
-      const displayedDefectsSections = document.getElementsByClassName('displayedDefectsSection');
-      const signpostContainer = document.getElementsByClassName('signpost-container')[0];
+      const displayedDefectsSections = this.elementRef.nativeElement.querySelectorAll('.displayedDefectsSection');
+      const signpostContainer = this.elementRef.nativeElement.querySelectorAll('.signpost-container')[0];
       for(var i = 0; i < displayedDefectsSections.length; i++) {
         if(displayedDefectsSections[i].contains(event.srcElement) || (signpostContainer && signpostContainer.contains(event.srcElement))) {
           if(this.hasClass(event.srcElement, 'pagination-next', true)) {
             const nextElementId = Number(this.element_mapping.vavr.xpath.activeElement.getAttribute('element-id')) + 1;
             this.addAndRemoveBorderStyle(this.visibleEle, nextElementId);
+            this.isContrastCheck = false;
           } else if(this.hasClass(event.srcElement, 'pagination-previous', true)) {
             const previousElementId = Number(this.element_mapping.vavr.xpath.activeElement.getAttribute('element-id')) - 1;
-            console.log(previousElementId)
             this.addAndRemoveBorderStyle(this.visibleEle, previousElementId);
+            this.isContrastCheck = false;
           } else if(this.hasClass(event.srcElement, 'pagination-first', true)) {
-            console.log(1)
             this.addAndRemoveBorderStyle(this.visibleEle, 1);
+            this.isContrastCheck = false;
           } else if(this.hasClass(event.srcElement, 'pagination-last', true)) {
-            console.log(this.visibleEle.length)
             this.addAndRemoveBorderStyle(this.visibleEle, this.visibleEle.length);
+            this.isContrastCheck = false;
           }
+          return false;
         }
       }
     }
@@ -728,9 +846,9 @@ export class HomeComponent implements OnInit {
   removeClass( elements,cName ){
     if( this.hasClass( elements,cName ) ){
       if(typeof(elements.className) == 'string') {
-        elements.className = elements.className.replace( new RegExp( "(\\s|^)" + cName + "(\\s|$)" )," " );
+        elements.className = elements.className.replace( new RegExp( "(\\s|^)" + cName + "(\\s|$)" ),"" );
       } else if(typeof(elements.className) !== 'string' && elements.className.baseVal) {
-        elements.className.baseVal = elements.className.baseVal.replace( new RegExp( "(\\s|^)" + cName + "(\\s|$)" )," " );
+        elements.className.baseVal = elements.className.baseVal.replace( new RegExp( "(\\s|^)" + cName + "(\\s|$)" ),"" );
       }
       
     }
@@ -756,23 +874,23 @@ export class HomeComponent implements OnInit {
     this.floating = false;
     this.rightToPage = true;
     this.changePositionOfSignpost();
-    document.getElementById('report-tagged-iframe').style.width = window.innerWidth - 390 + 'px';
-    document.getElementById('menu-content-fixed').style.left = window.innerWidth - 390 + 'px';
+    this.elementRef.nativeElement.querySelector('#report-tagged-iframe').style.width = window.innerWidth - 390 + 'px';
+    this.elementRef.nativeElement.querySelector('#menu-content-fixed').style.left = window.innerWidth - 390 + 'px';
   }
 
   clickFloatToPage() {
     this.floating = true;
     this.rightToPage = false;
     this.changePositionOfSignpost();
-    document.getElementById('report-tagged-iframe').style.width = '100%';
-    document.getElementById('menu-content-fixed').style.left = '120px';
+    this.elementRef.nativeElement.querySelector('#report-tagged-iframe').style.width = '100%';
+    this.elementRef.nativeElement.querySelector('#menu-content-fixed').style.left = '120px';
   }
 
   changePositionOfSignpost() {
-    const signpostTriggersWrapper = document.getElementById('signpost-triggers-wrapper');
-    if(signpostTriggersWrapper.style.display == 'block') {
+    const signpostTriggersWrapper = this.elementRef.nativeElement.querySelector('#signpost-triggers-wrapper');
+    if(signpostTriggersWrapper.style.display == 'block' && this.element_mapping.vavr.xpath.activeElement) {
       setTimeout(() => {
-        this.fixedSignpost(this.element_mapping.vavr.xpath.activeElement, signpostTriggersWrapper, this.getActiveElePosition().x, this.getActiveElePosition().y);
+        this.fixedSignpost(this.element_mapping.vavr.xpath.activeElement, signpostTriggersWrapper, this.getActiveElePosition().x, this.getActiveElePosition().y, false);
       }, 500)
     }
   }
@@ -782,7 +900,7 @@ export class HomeComponent implements OnInit {
     var event = event || window.event;
 
     this.startTime = event.timeStamp;
-    const dragRef = document.getElementById('menu-content-fixed');
+    const dragRef = this.elementRef.nativeElement.querySelector('#menu-content-fixed');
     this.diffX = event.clientX - dragRef.offsetLeft;
     this.diffY = event.clientY - dragRef.offsetTop;
 
@@ -802,7 +920,7 @@ export class HomeComponent implements OnInit {
       this.moveX = event.clientX - this.diffX;
       this.moveY = event.clientY - this.diffY;
 
-      const dragRef = document.getElementById('menu-content-fixed');
+      const dragRef = this.elementRef.nativeElement.querySelector('#menu-content-fixed');
       // 获取需要排除的元素
       const solidBorderSign = event.toElement || event.srcElement;
       var elemCancel = solidBorderSign.id == 'pop-out-in' || solidBorderSign.id == 'pop-outIn-img';
@@ -982,6 +1100,11 @@ export class HomeComponent implements OnInit {
       defectTp.isShowIssueList = false;
       defectTp.showOrHideBreakdown = 'Show '+ defectTp.category+' Breakdown';
       defectTp.eyeHideArialLabel = 'Show '+ defectTp.totalDefect + defectTp.category +' on page';
+
+      const panelOpenedIssues = defectTp.defectList.find(d => d.panelOpen == true);
+      if(panelOpenedIssues) {
+        this.hideAllShowIssues(panelOpenedIssues);
+      }
     } else {
       defectTp.isShowIssueList = true;
       defectTp.showOrHideBreakdown = 'Hide '+ defectTp.category+' Breakdown';
@@ -1021,7 +1144,7 @@ export class HomeComponent implements OnInit {
 
   expandMenu(){
     this.isMenuClosed = false;
-    var dragRef = document.getElementById('dragRef');
+    var dragRef = this.elementRef.nativeElement.querySelector('#dragRef');
     dragRef.style.left = '0px';
     dragRef.style.top = '30%';
   }
@@ -1029,18 +1152,34 @@ export class HomeComponent implements OnInit {
   collapse() {
     if(this.isMemuExpanded) {
       this.isMemuExpanded = false;
-      document.getElementById('report-tagged-iframe').style.width = '100%';
+      this.elementRef.nativeElement.querySelector('#report-tagged-iframe').style.width = '100%';
       if(this.rightToPage) {
-        document.getElementById('menu-content-fixed').style.left = window.innerWidth + 'px';
+        this.elementRef.nativeElement.querySelector('#menu-content-fixed').style.left = window.innerWidth + 'px';
       }
     } else {
       this.isMemuExpanded = true;
-      document.getElementById('report-tagged-iframe').style.width = window.innerWidth - 390 + 'px';
+      this.elementRef.nativeElement.querySelector('#report-tagged-iframe').style.width = window.innerWidth - 390 + 'px';
       if(this.rightToPage) {
-        document.getElementById('menu-content-fixed').style.left = window.innerWidth - 390 + 'px';
+        this.elementRef.nativeElement.querySelector('#menu-content-fixed').style.left = window.innerWidth - 390 + 'px';
       }
     }
     this.changePositionOfSignpost();
   }
 
+  activeContrastEleStyle = null;
+  onContrastCheck() {
+    this.isContrastCheck = true;
+    let activeElement = this.element_mapping.vavr.xpath.activeElement;
+    this.activeContrastEleStyle = {
+      c: window.getComputedStyle(activeElement).getPropertyValue('color'),
+      b: window.getComputedStyle(activeElement).getPropertyValue('background-color')
+    }
+  }
+
+  isContrastCheck: boolean = false;
+  updateActiveEleColor(event) {
+    let activeElement = this.element_mapping.vavr.xpath.activeElement;
+    activeElement.style.color = event.f;
+    activeElement.style['background-color'] = event.b;
+  }
 }

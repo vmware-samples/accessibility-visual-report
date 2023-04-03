@@ -1,0 +1,164 @@
+#ratioContainer {
+	display: inline-block;
+	margin-left: 0.5em;
+	padding-top: 11px;
+	text-align: center;
+}
+#ratio,
+#textBackRatio,
+#linkTextRatio,
+#linkBackRatio {
+	display: block;
+	font-size: 2em;
+}
+#textBackRatio,
+#linkTextRatio,
+#linkBackRatio {
+	display: inline-block;
+	min-width: 4em;
+}
+#ratioContainer > span {
+	border: 1px solid #CCC;
+	border-radius: 6px;
+	display: inline-block;
+	margin-bottom: 10px;
+	padding: 15px;
+	min-width: 10em;
+}
+#textBackRatioContainer > span,
+#linkTextRatioContainer > span,
+#linkBackRatioContainer > span {
+	border: 1px solid #CCC;
+	border-radius: 6px;
+	display: block;
+	margin-bottom: 10px;
+	padding: 10px;
+}
+#ratioContainer.pass > span,
+#textBackRatioContainer.pass > span,
+#linkTextRatioContainer.pass > span,
+#linkBackRatioContainer.pass > span {
+	border: 3px solid #080;
+	padding: 8px;
+}
+#permalink {
+	display: block;
+}
+#contrastForm {
+	float: left;
+}
+::ng-deep .modal-dialog{
+	cursor: move;
+	position: fixed;
+	top: 35%;
+	left: 40%;
+}
+#contrast-check-dialog{
+	width: 570px;
+	z-index: 1150;
+	padding: 1.2rem;
+	background-color: white;
+	border-radius: .15rem;
+	box-shadow: 0 .05rem .1rem .1rem #00000030;
+	position: fixed;
+	top: calc(50% - 285px);
+	left: calc(50% - 200px);
+	cursor: move;
+}
+.modal-title{
+	margin-bottom: 1rem;
+	margin-top: .5rem;
+}
+#contrastForm fieldset {
+	border: 1px solid #CCC;
+	border-radius: 8px;
+	display: inline-block;
+	margin: 0 10px 10px 0;
+	padding: 10px;
+	width: 45%;
+}
+#contrastForm fieldset div {
+	margin-top: 0.5em;
+}
+#contrastForm fieldset div div{
+	height:10px;
+	margin-top:0;
+	border-radius:3px;
+}
+#contrastForm input {
+	margin-right: 0.5em;
+	vertical-align: bottom;
+}
+#contrastForm label {
+	vertical-align: top;
+}
+#contrastForm input[type=text] {
+	border: 1px solid #777;
+	font: 100% 'PT Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+	height: 22px;
+	padding: 0 4px;
+	text-transform: uppercase;
+	width: 5.5em;
+}
+#contrastForm input[type=color] {
+	border: 0;
+	cursor: pointer;
+	height: 24px;
+	padding: 0;
+	width: 5.5em;
+}
+#contrastForm input[type=range] {
+	width: 100%;
+}
+#swap {
+	background: transparent;
+	border: 0;
+	font-size: 2em;
+	margin: 1.3em .3em 0 0;
+	vertical-align: top;
+}
+#fLightness, #bLightness {
+	height: 10px;
+	cursor: pointer;
+    border-radius: 5px;
+    vertical-align: middle!important;
+}
+
+#fError, #bError, #lError {
+	display: none;
+}
+.results {
+	float: left;
+}
+.results p {
+	padding-bottom: 2px;
+}
+.results span {
+	float: right;
+	font-weight: bold;
+	margin: 0 0.5em;
+	padding: 0 0.5em;
+	text-align: center;
+	transition: all .2s;
+	width: 2.2em;
+}	
+span.pass {
+	background-color: #080;
+	border-radius: 1em;
+	color: #FFF;
+}
+span.fail {
+	color: #C00;
+}
+h2 {
+	clear: both;
+}
+legend {
+	font-weight: bold;
+}
+hr {
+	color: transparent;
+}
+::ng-deep .modal-backdrop{
+    background: none;
+}

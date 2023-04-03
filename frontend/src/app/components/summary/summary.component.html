@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 
-<div *ngIf="element">
+<div *ngIf="defectTypeElements[currentPage-1]">
   <button class="btn btn-sm btn-link pagination-first" aria-label="Go To Fist" id="myFirst" [disabled]="currentPage==1"
     (click)="gotoPage(1)">
     <cds-icon shape="step-forward-2" direction="Down"></cds-icon>
@@ -12,7 +12,7 @@
     <cds-icon shape="angle" direction="Left"></cds-icon>
   </button>
 
-  <span class="element-title"> {{issueOnTitle}} </span>
+  <span class="element-title"> {{category + ' ' + currentPage +"/" + defectTypeElements.length}} </span>
 
   <button class="btn btn-sm btn-link pagination-next" aria-label="Go To Next" id="myNext"
     [disabled]="currentPage==defectTypeElements.length" (click)="gotoPage(currentPage+1)">
@@ -22,34 +22,13 @@
     [disabled]="currentPage==defectTypeElements.length" (click)="gotoPage(defectTypeElements.length)">
     <cds-icon shape="step-forward-2" direction="Up"></cds-icon>
   </button>
-  <!-- <div class="signpost-triggers-wrapper notDisplayElements" *ngIf="notDisplayElements != 0">
-    <div class="signpost-trigger-demo">
-        <div class="signpost-item">
-          <div class="trigger-item">
-            <clr-signpost>
-                <div class="info-circle" 
-                        clrSignpostTrigger>
-                        {{notDisplayElements}}
-                </div>
-                <clr-signpost-content [clrPosition]="'right-middle'" *clrIfOpen class="notDisplayEleNumContent">
-                  <h5 *ngIf="notDisplayElements - defectTypeXpath.length > 0">*{{notDisplayElements - defectTypeXpath.length}} elements are duplicated.</h5>
-                  <h5 *ngIf="defectTypeXpath.length > 0">*{{defectTypeXpath.length}} elements are not displayed:</h5>
-                  <div *ngFor="let xpath of defectTypeXpath; let i = index">
-                    {{i + 1 + '、 ' + xpath}}
-                  </div>
-                </clr-signpost-content>
-            </clr-signpost>
-          </div>
-        </div>
-    </div>
-  </div> -->
 </div>
 
-<div *ngIf="element" class="issue-content">
+<div *ngIf="defectTypeElements[currentPage-1]" class="issue-content">
   <div class="sevirity">
     <div class="sevirity-value">
       <span class="element-title">WCAG Conformance Level: </span>
-      <span>{{element.sevirity}}</span>
+      <span>{{defectTypeElements[currentPage-1].sevirity}}</span>
     </div>
     <clr-dropdown class="sevirity-dropdown" hidden>
       <button class="nav-icon" clrDropdownTrigger aria-label="toggle settings menu">
@@ -65,26 +44,35 @@
   </div>
   <div class="description">
     <span class="element-title">Description: </span>
-    <span>{{element.description}}</span>
+    <span>{{defectTypeElements[currentPage-1].description}}</span>
   </div>
-  <div class="source-code" *ngIf="element.code">
+  <div class="source-code" *ngIf="defectTypeElements[currentPage-1].code">
     <span class="element-title">Source Code: </span>
-    <div (click)='codeMapping()'>{{element.code}}
+    <div (click)='codeMapping()' class="element-code">{{defectTypeElements[currentPage-1].code}}
     </div>
   </div>
-  <div class="source-code" *ngIf="element.xpath">
+  <div class="description" *ngIf="defectTypeElements[currentPage-1].contrast">
+    <div class="element-title contrast">
+      <span>Contrast:</span>
+      <button class="contrast-btn" *ngIf="isSignpost && elementDisplay !== 'none'" (click)="openContrastDialog()">Contrast Check</button>
+    </div>
+    <div>Element has insufficient color contrast of {{defectTypeElements[currentPage-1].contrast[0]}} (foreground color: {{defectTypeElements[currentPage-1].contrast[1]}},background color: {{defectTypeElements[currentPage-1].contrast[2]}},{{defectTypeElements[currentPage-1].contrast[3]}}).
+      Expected contrast ratio of 4.5:1.
+    </div>
+  </div>
+  <div class="source-code" *ngIf="defectTypeElements[currentPage-1].xpath">
     <span class="element-title">Xpath: </span>
-    <div (click)='codeMapping()'>{{element.xpath}}
+    <div (click)='codeMapping()'>{{defectTypeElements[currentPage-1].xpath}}
     </div>
   </div>
 
   <div>
     <span class="element-title">How to fix it: </span>
-    <span>{{element.action}}</span>
+    <span>{{defectTypeElements[currentPage-1].action}}</span>
   </div>
 </div>
 
-<div *ngIf="element">
+<div *ngIf="defectTypeElements[currentPage-1]">
   <button class="btn btn-sm btn-link pagination-first" aria-label="Go To Fist" id="myFirst" [disabled]="currentPage==1"
     (click)="gotoPage(1)">
     <cds-icon shape="step-forward-2" direction="Down"></cds-icon>
@@ -94,7 +82,7 @@
     <cds-icon shape="angle" direction="Left"></cds-icon>
   </button>
 
-  <span class="element-title"> {{issueOnTitle}} </span>
+  <span class="element-title"> {{category + currentPage +"/" + defectTypeElements.length}} </span>
 
   <button class="btn btn-sm btn-link pagination-next" aria-label="Go To Next" id="myNext"
     [disabled]="currentPage==defectTypeElements.length" (click)="gotoPage(currentPage+1)">

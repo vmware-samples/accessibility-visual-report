@@ -1,0 +1,46 @@
+
+<div id="contrast-check-dialog" *ngIf="isContrastCheck">
+    <h3 class="modal-title" id="contrast-check-title">Contrast Checker</h3>
+
+    <div class="modal-body">
+        <form id="contrastForm" (submit)="contrastSubmit($event)">
+        <fieldset>
+            <legend class="aaa">Foreground Color</legend>
+            <p class="error" id="fError">Please enter a valid <a href="http://en.wikipedia.org/wiki/Web_colors#Hex_triplet">hex triplet</a>, or use the color picker.</p>
+            <label for="fHex" hidden>Hex</label>
+            <input id="fHex" type="text" maxlength="7" required="" (change)="colorChange('fHex')">
+            <label for="fPick" hidden>color picker</label>
+            <input id="fPick" type="color" (change)="colorChange('fPick')">
+            <div>
+            <label for="fLightness">Lightness</label>
+            <input id="fLightness" type="range" min="0" max="100" step="1" value="50" (mouseover)="ligntnessMove('fLightness')">
+            <div class="gradient" style="background: linear-gradient(to right, rgb(0, 0, 0), rgb(128, 128, 128), rgb(255, 255, 255));"></div>
+            </div>
+        </fieldset>
+        <fieldset>
+            <legend>Background Color</legend>
+            <p class="error" id="bError">Please enter a valid <a href="http://en.wikipedia.org/wiki/Web_colors#Hex_triplet">hex triplet</a>, or use the color picker.</p>
+            <label for="bHex" hidden>Hex</label>
+            <input id="bHex" type="text" maxlength="7" required="" (change)="colorChange('bHex')">
+            <label for="bPick" hidden>color picker</label>
+            <input id="bPick" type="color" (change)="colorChange('bPick')">
+            <div>
+            <label for="bLightness">Lightness</label>
+            <input id="bLightness" type="range" min="0" max="100" step="1" (mouseover)="ligntnessMove('bLightness')">
+            <div class="gradient" style="background: linear-gradient(to right, rgb(0, 0, 0), rgb(128, 128, 128), rgb(255, 255, 255));"></div>
+            </div>
+        </fieldset>
+        </form>
+        <div id="ratioContainer" class="">
+        <span>
+            Contrast Ratio
+            <span id="ratio" aria-live="polite" aria-atomic="false"><b>2.32</b>:1</span>
+        </span>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-outline"
+                (click)="closeModal()">Close</button>
+        </div>
+    </div>
+</div>
+

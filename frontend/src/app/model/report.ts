@@ -91,6 +91,7 @@
     xpath?: string;
     elementId: string;
     elementObject: object;
+    contrast?: any[];
   }
 
   export class DefectUtil{

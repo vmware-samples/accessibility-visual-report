@@ -13,6 +13,11 @@ from .a11y_tp import *
 
 ENCODING='utf-8'
 
+DATE_TIME_TIMESTAMP_FORMAT='%Y-%m-%d %H:%M:%S'
+DATE_TIME_FULL_TIMESTAMP_FORMAT='%Y-%m-%d %H:%M:%S.%f'
+DATE_TIME_INT_FORMAT='%Y%m%d%H%M%S'
+DATE_TIME_FULL_INT_FORMAT='%Y%m%d%H%M%S%f'
+
 def write_file(filename,txt,write_mode='w'):
     desc_dir_path=os.path.dirname(filename)
     if(not os.path.exists(desc_dir_path)):
@@ -122,7 +127,7 @@ def checkResultUtilityType(result_utility_type):
     return error_code
 
 def getResultFileName(create_time,screenshot_uid,uuid,result_api_type):
-    result_date=datetime.datetime.strptime(create_time,'%Y-%m-%d %H:%M:%S.%f').strftime("%Y%m%d")
+    result_date=datetime.datetime.strptime(create_time,DATE_TIME_FULL_TIMESTAMP_FORMAT).strftime("%Y%m%d")
     result_file_name=join_folders([result_date,screenshot_uid,uuid+'_'+result_api_type+'.json'])
     result_full_file_name=join_folders([ACCESSIBILITY_STORAGE_ROOT,result_file_name])
     return result_file_name,result_full_file_name

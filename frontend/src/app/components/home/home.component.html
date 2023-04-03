@@ -83,7 +83,7 @@
                 </button>
               </div>
               <div style="margin-top: -30px;" *ngIf="isIncorrectUrl">The url entered in Page Tested is not recognized and lacks [https://|https:].</div>
-              
+
               <clr-tabs class="results-tabs">
                 <clr-tab aria-label="Test Results">
                     <button clrTabLink id="link1"><clr-icon shape="form" class="tab-icons"></clr-icon>Test Results</button>
@@ -110,20 +110,20 @@
                           </div>
                         </div>
                         <clr-accordion class="issue-list" *ngIf='defectTp.isShowIssueList'>
-                          <clr-accordion-panel *ngFor='let defectType of defectTp.defectList' [hidden]="defectType.defectTypeElements == 0">
-                            <clr-accordion-title class="issue-accordion-title"  (click)='openPanel(defectType, defectTp)'>
+                          <clr-accordion-panel *ngFor='let defectType of defectTp.defectList;let i = index' [hidden]="defectType.defectTypeElements == 0">
+                            <clr-accordion-title class="issue-accordion-title" (click)='openPanel(defectType, defectTp)'>
                               <cds-icon shape="eye" status='info' class="eyeIcon"></cds-icon>
                               <span class="defectTypeName">{{defectType.title}}</span>
                               <cds-icon shape="angle" direction="right" class="expend-icon" [ngClass]="{'panel-open': defectType.panelOpen,'panel-close':!defectType.panelOpen}"></cds-icon> 
                               <div class="ele-length">{{defectType.defectTypeElements.length}}</div>                   
                             </clr-accordion-title>
                             <clr-accordion-content *clrIfExpanded>
-                              <app-summary [defectTypeElements]="defectType.defectTypeElements" [category]="defectType.category"></app-summary>
+                              <app-summary [defectTypeElements]="defectType.defectTypeElements" [currentPage]="numberSign" [isNotDisplayElements]="false" [category]="defectType.category" [isSignpost]="false"></app-summary>
                             </clr-accordion-content>
                           </clr-accordion-panel>
                         </clr-accordion>
                       </section>
-                      <section class="summary-section" *ngFor='let defectTp of notDisplayDefectTypeList' [hidden]="defectTp.notDisplayTotalDefect == 0">
+                      <section class="summary-section notDisplayedDefectsSection" *ngFor='let defectTp of notDisplayDefectTypeList' [hidden]="defectTp.notDisplayTotalDefect == 0">
                         <div class="issue-header" [ngClass]="{'has-border-bottom':!defectTp.isShowIssueList || defectTp.notDisplayTotalDefect == 0,'has-no-border-bottom':defectTp.isShowIssueList && defectTp.notDisplayTotalDefect > 0}">
                           <div class="issue-title">
                             <h3>{{defectTp.category}}<span style="font-size:0.8rem"> (not located visually)</span></h3>
@@ -142,7 +142,7 @@
                               <div class="ele-length">{{defectType.notDisplayElements.length}}</div>                   
                             </clr-accordion-title>
                             <clr-accordion-content *clrIfExpanded>
-                              <app-summary [defectTypeElements]="defectType.notDisplayElements" [category]="defectType.category"></app-summary>
+                              <app-summary [defectTypeElements]="defectType.notDisplayElements" [isNotDisplayElements]="true" [category]="defectType.category" [isSignpost]="false"></app-summary>
                             </clr-accordion-content>
                           </clr-accordion-panel>
                         </clr-accordion>
@@ -199,10 +199,16 @@
                           <span *ngIf="eleDisplay == 'none'" class="displayTip"> (Hidden element)</span>
                         </h5>
                         <!-- <app-summary class="signpost-tip" [(currentPage)]='numberSign' [defectTypeElements]='visibleEle'></app-summary> -->
-                        <app-summary class="signpost-tip" [defectTypeElements]='visibleEle' [category]="defectCategory"></app-summary>
+                        <app-summary class="signpost-tip" [defectTypeElements]='visibleEle' [currentPage]="numberSign" [isNotDisplayElements]="false" [category]="defectCategory" [isSignpost]="true"
+                          (onContrastCheck)="onContrastCheck()" [elementDisplay]="eleDisplay"></app-summary>
                     </clr-signpost-content>
                 </clr-signpost>
             </div>
         </div>
     </div>
 </div>
+
+<app-contrast-checker *ngIf="isContrastCheck" (updateColor)="updateActiveEleColor($event)" [isContrastCheck]="isContrastCheck" 
+[activeContrastEleStyle]="activeContrastEleStyle"
+  (closeContrastModal)="isContrastCheck = false"></app-contrast-checker>
+

@@ -18,6 +18,7 @@ import { ROUTING } from './app-routing.module';
 import { ReportService } from './services/report.service';
 import { HttpClientModule } from '@angular/common/http';
 import { DragDropComponent } from './components/dialogs/drag-drop/drag-drop.component';
+import { ContrastCheckerComponent } from './components/dialogs/contrast-checker/contrast-checker.component';
 
 @NgModule({
   declarations: [
@@ -28,7 +29,8 @@ import { DragDropComponent } from './components/dialogs/drag-drop/drag-drop.comp
     CodeSnippetComponent,
     ConfigDialogComponent,
     HelpDialogComponent,
-    DragDropComponent
+    DragDropComponent,
+    ContrastCheckerComponent
   ],
   imports: [
     BrowserModule,

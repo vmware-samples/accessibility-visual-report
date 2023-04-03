@@ -23,6 +23,7 @@ export class SchemaMappingService {
 
 
   public reports: Report[] = [];
+  public result_info: any[] = [];
 
   constructor(
     //private env: EnvironmentsService,
@@ -108,8 +109,8 @@ export class SchemaMappingService {
     .then(res => res.json())
     .then((report_json) => {
       console.log('Checkout this JSON! ', report_json);
-      let result_info = report_json.result_info;
-      result_info.map(result_entry => {
+      this.result_info = report_json.result_info;
+      this.result_info.map(result_entry => {
         let report = this.mapReportPerConfig(result_entry);
         this.reports.push(report);
       });

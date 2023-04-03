@@ -1,8 +1,7 @@
 // Copyright 2022 VMware, Inc.
 // SPDX-License-Identifier: MIT
 
-import { Component, OnInit, HostListener } from '@angular/core';
-import { Input, EventEmitter } from '@angular/core';
+import { Component, OnInit, Input, EventEmitter, Output } from '@angular/core';
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 
 @Component({
@@ -11,7 +10,7 @@ import { LiveAnnouncer } from '@angular/cdk/a11y';
   styleUrls: ['./summary.component.css']
 })
 export class SummaryComponent implements OnInit {
-  // @Input()
+  @Input()
   currentPage: number;
 
   @Input()
@@ -23,29 +22,18 @@ export class SummaryComponent implements OnInit {
   @Input()
   defectTypeXpath: string[];
 
-  element : any = null;
-  issueOnTitle : string = "";
+  @Input()
+  isSignpost: boolean;
 
-  allElements = [
-    {
-      sevirity: 'A',
-      description: 'A link contains no text.',
-      code: '<span>iris_circle</span>',
-      actions: 'Remove the empty link or provide text within the link that describes the functionality and/or target of that link.'
-    },
-    {
-      sevirity: 'AA',
-      description: 'A link contains no text.',
-      code: '<span>description portrait</span>',
-      actions: 'Sescribes the functionality and/or target of that link.'
-    },
-    {
-      sevirity: 'A',
-      description: 'A link contains no text.',
-      code: '<span>missing alternative text.</span>',
-      actions: 'Remove the empty link or provide text within the link/'
-    }
-  ]
+  @Input()
+  elementDisplay: string;
+
+  @Input()
+  isNotDisplayElements: boolean;
+
+  @Output() public onContrastCheck: EventEmitter<any> = new EventEmitter();
+
+  isContrastCheck: boolean = false;
 
   constructor(
     private liveAnnouncer: LiveAnnouncer,
@@ -54,13 +42,10 @@ export class SummaryComponent implements OnInit {
    }
 
   ngOnInit(): void {
-    // delay 300ms to avoid out of sync
-    setTimeout(()=>{
-      let newCurrentPage = Number(document.getElementById('numberSign').innerText);
-      if (newCurrentPage != this.currentPage) {
-        this.gotoPage(newCurrentPage);
-      }
-    },300)
+    if(this.isNotDisplayElements) {
+      this.currentPage = 1;
+    }
+    this.gotoPage(this.currentPage)
   }
 
   gotoPage(i) {
@@ -72,8 +57,10 @@ export class SummaryComponent implements OnInit {
     }
     console.log("Will got to page: "+ String(i));
     this.currentPage = i;
-    this.element = this.defectTypeElements[this.currentPage-1];
-    this.issueOnTitle = this.category + ' ' + this.currentPage +"/" + lenPage
-    this.liveAnnouncer.announce( "You are now on: "+ this.issueOnTitle.replace("/"," of "))
+    this.liveAnnouncer.announce( "You are now on: "+ this.category + this.currentPage +"of" + this.defectTypeElements.length);
+  }
+
+  openContrastDialog() {
+    this.onContrastCheck.emit();
   }
 }

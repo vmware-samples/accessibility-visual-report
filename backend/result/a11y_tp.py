@@ -3,6 +3,7 @@
 
 accessibility_result_api_types=['wave','crest']
 accessibility_result_utility_types=['internal','opensource']
+accessibility_wave_categories_default=["error","contrast"]
 
 # a11y_task_default
 accessibility_task_url_details_default = {
@@ -42,7 +43,7 @@ accessibility_task_url_json_default = {
             "last_update": None
         }
 accessibility_task_url_element_list_default={
-            "wave_categories": ["error"，"contrast"], 
+            "wave_categories": accessibility_wave_categories_default, 
             "element_locator": "selectors", 
             "elements": [],
             "issue_items_filter_type": "include", 
